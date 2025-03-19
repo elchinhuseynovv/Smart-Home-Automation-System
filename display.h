@@ -9,9 +9,17 @@ class Display {
 public:
     Display();
     bool begin();
-    void updateStatus(float temperature, float humidity, bool motion, int lightLevel);
+    void updateStatus(float temperature, float humidity, bool motion, float lightLevel, bool isRaining, float airQuality);
+    void showAlert(const char* message);
+    void showGraph(float data[], int count, const char* title);
     void clear();
+    void setBrightness(uint8_t brightness);
+    void toggleDisplayMode();
     
 private:
     Adafruit_SSD1306 display;
+    bool detailedMode;
+    void drawProgressBar(int x, int y, int width, int height, int progress);
+    void displayBasicInfo(float temperature, float humidity, bool motion, float lightLevel);
+    void displayDetailedInfo(float temperature, float humidity, bool motion, float lightLevel, bool isRaining, float airQuality);
 };
