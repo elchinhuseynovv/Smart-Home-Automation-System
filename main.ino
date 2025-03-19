@@ -3,6 +3,7 @@
    - Controls lights with motion detection
    - Monitors temperature and triggers fan
    - Displays status on an OLED screen
+   - Unlocks door based on motion and temperature
 */
 
 #include <Wire.h>
@@ -74,11 +75,13 @@ void loop() {
     display.println(motion ? "YES" : "NO");
     display.display();
 
-    // Simulate smart door unlock with servo
+    // Smart Door Unlock
     if (motion == HIGH && temp < 28.0) {
+        Serial.println("Unlocking door...");
         doorServo.write(90);
         delay(5000);
         doorServo.write(0);
+        Serial.println("Door locked");
     }
 
     delay(2000);
