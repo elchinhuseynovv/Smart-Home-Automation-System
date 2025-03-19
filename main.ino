@@ -4,6 +4,9 @@
    - Monitors temperature and triggers fan
    - Displays status on an OLED screen
    - Unlocks door based on motion and temperature
+   - Monitors humidity and alerts if too high
+   - Sends an alert if motion is detected at night
+   - Controls brightness of LED based on ambient light
 */
 
 #include <Wire.h>
@@ -19,6 +22,8 @@
 #define LEDPIN 4
 #define FANPIN 5
 #define SERVO_PIN 6
+#define LDRPIN A0
+#define BUZZERPIN 7
 
 // Sensor and Display Setup
 DHT dht(DHTPIN, DHTTYPE);
@@ -31,6 +36,8 @@ void setup() {
     pinMode(PIRPIN, INPUT);
     pinMode(LEDPIN, OUTPUT);
     pinMode(FANPIN, OUTPUT);
+    pinMode(LDRPIN, INPUT);
+    pinMode(BUZZERPIN, OUTPUT);
     doorServo.attach(SERVO_PIN);
     doorServo.write(0);
 
@@ -45,11 +52,14 @@ void setup() {
 
 void loop() {
     float temp = dht.readTemperature();
+    float humidity = dht.readHumidity();
     int motion = digitalRead(PIRPIN);
+    int lightLevel = analogRead(LDRPIN);
 
-    // Motion-activated lights
+    // Motion-activated lights with brightness control
     if (motion == HIGH) {
-        digitalWrite(LEDPIN, HIGH);
+        int brightness = map(lightLevel, 0, 1023, 255, 0);
+        analogWrite(LEDPIN, brightness);
         Serial.println("Motion detected: Lights ON");
     } else {
         digitalWrite(LEDPIN, LOW);
@@ -63,6 +73,19 @@ void loop() {
         digitalWrite(FANPIN, LOW);
     }
 
+    // Humidity monitoring
+    if (humidity > 70.0) {
+        Serial.println("Warning: High humidity detected!");
+    }
+
+    // Night-time motion alert (Assume darkness if lightLevel is low)
+    if (motion == HIGH && lightLevel < 300) {
+        digitalWrite(BUZZERPIN, HIGH);
+        Serial.println("ALERT: Motion detected at night!");
+        delay(1000);
+        digitalWrite(BUZZERPIN, LOW);
+    }
+
     // Display status on OLED
     display.clearDisplay();
     display.setTextSize(1);
@@ -71,8 +94,13 @@ void loop() {
     display.print("Temp: ");
     display.print(temp);
     display.println(" C");
+    display.print("Humidity: ");
+    display.print(humidity);
+    display.println("%");
     display.print("Motion: ");
     display.println(motion ? "YES" : "NO");
+    display.print("Light: ");
+    display.println(lightLevel);
     display.display();
 
     // Smart Door Unlock
