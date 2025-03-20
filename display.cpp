@@ -1,6 +1,12 @@
 #include "display.h"
 
-Display::Display() : display(128, 64, &Wire, -1), detailedMode(false) {
+Display::Display() 
+    : display(128, 64, &Wire, -1), 
+      detailedMode(false),
+      currentPage(MAIN),
+      autoPageChange(false),
+      pageChangeInterval(5000),
+      lastPageChange(0) {
 }
 
 bool Display::begin() {
@@ -16,128 +22,246 @@ bool Display::begin() {
 void Display::updateStatus(float temperature, float humidity, bool motion, float lightLevel, bool isRaining, float airQuality) {
     display.clearDisplay();
     
-    if (detailedMode) {
-        displayDetailedInfo(temperature, humidity, motion, lightLevel, isRaining, airQuality);
-    } else {
-        displayBasicInfo(temperature, humidity, motion, lightLevel);
+    switch (currentPage) {
+        case MAIN:
+            if (detailedMode) {
+                displayDetailedInfo(temperature, humidity, motion, lightLevel, isRaining, airQuality);
+            } else {
+                displayBasicInfo(temperature, humidity, motion, lightLevel);
+            }
+            break;
+            
+        case ENVIRONMENT:
+            displayEnvironmentPage(temperature, humidity, 0, airQuality);
+            break;
+            
+        case SECURITY:
+            displaySecurityPage(true, !isRaining, motion);
+            break;
+            
+        case ENERGY:
+            displayEnergyPage(0, 0, 0);
+            break;
+            
+        case SETTINGS:
+            displaySettingsPage();
+            break;
     }
+    
+    display.display();
+    
+    // Handle auto page change
+    if (autoPageChange && (millis() - lastPageChange >= pageChangeInterval)) {
+        nextPage();
+        lastPageChange = millis();
+    }
+}
+
+void Display::showEnergyStats(float consumption, float solar, float battery) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    
+    // Energy consumption
+    display.setCursor(0, 0);
+    display.println("Energy Usage:");
+    drawProgressBar(0, 10, 128, 8, map(consumption, 0, 5000, 0, 100));
+    display.setCursor(0, 20);
+    display.print(consumption);
+    display.println(" W");
+    
+    // Solar production
+    display.setCursor(0, 30);
+    display.println("Solar:");
+    drawProgressBar(0, 40, 128, 8, map(solar, 0, 2000, 0, 100));
+    display.setCursor(0, 50);
+    display.print(solar);
+    display.println(" W");
+    
+    // Battery level
+    display.setCursor(64, 30);
+    display.println("Battery:");
+    drawProgressBar(64, 40, 64, 8, battery);
+    display.setCursor(64, 50);
+    display.print(battery);
+    display.println("%");
     
     display.display();
 }
 
-void Display::displayBasicInfo(float temperature, float humidity, bool motion, float lightLevel) {
+void Display::showSecurityStatus(bool doorLocked, bool windowsClosed, bool motionDetected) {
+    display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(WHITE);
-    display.setCursor(0, 0);
     
+    display.setCursor(0, 0);
+    display.println("Security Status");
+    
+    display.setCursor(0, 16);
+    display.print("Door: ");
+    display.println(doorLocked ? "LOCKED" : "UNLOCKED");
+    
+    display.setCursor(0, 26);
+    display.print("Windows: ");
+    display.println(windowsClosed ? "CLOSED" : "OPEN");
+    
+    display.setCursor(0, 36);
+    display.print("Motion: ");
+    display.println(motionDetected ? "DETECTED" : "NONE");
+    
+    display.display();
+}
+
+void Display::showWeatherForecast(float tempTrend, float humidityTrend, float pressureTrend) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    
+    display.setCursor(0, 0);
+    display.println("Weather Forecast");
+    
+    // Temperature trend
+    display.setCursor(0, 16);
+    display.print("Temp: ");
+    drawTrendIndicator(50, 16, tempTrend);
+    
+    // Humidity trend
+    display.setCursor(0, 26);
+    display.print("Humidity: ");
+    drawTrendIndicator(50, 26, humidityTrend);
+    
+    // Pressure trend
+    display.setCursor(0, 36);
+    display.print("Pressure: ");
+    drawTrendIndicator(50, 36, pressureTrend);
+    
+    display.display();
+}
+
+void Display::nextPage() {
+    currentPage = static_cast<DisplayPage>((currentPage + 1) % 5);
+    lastPageChange = millis();
+}
+
+void Display::previousPage() {
+    currentPage = static_cast<DisplayPage>((currentPage + 4) % 5);
+    lastPageChange = millis();
+}
+
+void Display::setAutoPageChange(bool enabled, unsigned long interval) {
+    autoPageChange = enabled;
+    if (interval > 0) {
+        pageChangeInterval = interval;
+    }
+}
+
+void Display::drawTrendIndicator(int x, int y, float trend) {
+    if (trend > 0.1) {
+        display.fillTriangle(x, y+6, x+4, y, x+8, y+6, WHITE);
+    } else if (trend < -0.1) {
+        display.fillTriangle(x, y, x+4, y+6, x+8, y, WHITE);
+    } else {
+        display.drawFastHLine(x, y+3, 8, WHITE);
+    }
+}
+
+void Display::displayEnvironmentPage(float temperature, float humidity, float pressure, float airQuality) {
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    
+    display.setCursor(0, 0);
+    display.println("Environment");
+    
+    // Temperature
+    display.setCursor(0, 16);
     display.print("Temp: ");
     display.print(temperature, 1);
-    display.println(" C");
-    
-    display.print("Humidity: ");
-    display.print(humidity, 1);
-    display.println("%");
-    
-    display.print("Motion: ");
-    display.println(motion ? "YES" : "NO");
-    
-    display.print("Light: ");
-    display.print(lightLevel, 1);
-    display.println(" lux");
-}
-
-void Display::displayDetailedInfo(float temperature, float humidity, bool motion, float lightLevel, bool isRaining, float airQuality) {
-    display.setTextSize(1);
-    display.setTextColor(WHITE);
-    
-    // First column
-    display.setCursor(0, 0);
-    display.println("Environment:");
-    drawProgressBar(0, 12, 60, 8, temperature * 2);
-    display.setCursor(0, 22);
-    display.print(temperature, 1);
     display.println("C");
+    drawProgressBar(64, 16, 64, 8, map(temperature, 0, 40, 0, 100));
     
-    // Second column
-    display.setCursor(64, 0);
-    display.println("Humidity:");
-    drawProgressBar(64, 12, 60, 8, humidity);
-    display.setCursor(64, 22);
+    // Humidity
+    display.setCursor(0, 32);
+    display.print("Hum: ");
     display.print(humidity, 1);
     display.println("%");
+    drawProgressBar(64, 32, 64, 8, humidity);
     
-    // Status indicators
-    display.setCursor(0, 32);
-    display.print("Motion: ");
-    display.println(motion ? "Active" : "None");
-    
-    display.print("Rain: ");
-    display.println(isRaining ? "Yes" : "No");
-    
-    // Air quality bar
-    display.setCursor(0, 52);
+    // Air Quality
+    display.setCursor(0, 48);
     display.print("Air: ");
-    drawProgressBar(25, 54, 103, 8, airQuality);
+    display.print(airQuality, 1);
+    display.println("%");
+    drawProgressBar(64, 48, 64, 8, airQuality);
 }
 
-void Display::showAlert(const char* message) {
-    display.clearDisplay();
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(0, 0);
-    display.println("ALERT!");
-    display.setTextSize(1);
-    display.println(message);
-    display.display();
-}
-
-void Display::showGraph(float data[], int count, const char* title) {
-    display.clearDisplay();
+void Display::displaySecurityPage(bool doorLocked, bool windowsClosed, bool motionDetected) {
     display.setTextSize(1);
     display.setTextColor(WHITE);
     
-    // Draw title
     display.setCursor(0, 0);
-    display.println(title);
+    display.println("Security Status");
     
-    // Find min and max for scaling
-    float minVal = data[0];
-    float maxVal = data[0];
-    for (int i = 1; i < count; i++) {
-        if (data[i] < minVal) minVal = data[i];
-        if (data[i] > maxVal) maxVal = data[i];
-    }
+    // Door status
+    display.setCursor(0, 16);
+    display.print("Door: ");
+    display.println(doorLocked ? "Locked" : "Unlocked");
     
-    // Draw graph
-    int graphHeight = 40;
-    int graphBottom = 63;
-    for (int i = 0; i < count - 1; i++) {
-        int x1 = map(i, 0, count - 1, 0, 127);
-        int x2 = map(i + 1, 0, count - 1, 0, 127);
-        int y1 = map(data[i], minVal, maxVal, graphBottom, graphBottom - graphHeight);
-        int y2 = map(data[i + 1], minVal, maxVal, graphBottom, graphBottom - graphHeight);
-        display.drawLine(x1, y1, x2, y2, WHITE);
-    }
+    // Windows status
+    display.setCursor(0, 32);
+    display.print("Windows: ");
+    display.println(windowsClosed ? "Closed" : "Open");
     
-    display.display();
+    // Motion status
+    display.setCursor(0, 48);
+    display.print("Motion: ");
+    display.println(motionDetected ? "Detected" : "None");
 }
 
-void Display::drawProgressBar(int x, int y, int width, int height, int progress) {
-    progress = constrain(progress, 0, 100);
-    display.drawRect(x, y, width, height, WHITE);
-    display.fillRect(x + 1, y + 1, (width - 2) * progress / 100, height - 2, WHITE);
+void Display::displayEnergyPage(float consumption, float solar, float battery) {
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    
+    display.setCursor(0, 0);
+    display.println("Energy Status");
+    
+    // Power consumption
+    display.setCursor(0, 16);
+    display.print("Usage: ");
+    display.print(consumption);
+    display.println("W");
+    drawProgressBar(0, 24, 128, 8, map(consumption, 0, 5000, 0, 100));
+    
+    // Solar production
+    display.setCursor(0, 36);
+    display.print("Solar: ");
+    display.print(solar);
+    display.println("W");
+    drawProgressBar(0, 44, 128, 8, map(solar, 0, 2000, 0, 100));
+    
+    // Battery level
+    display.setCursor(0, 52);
+    display.print("Batt: ");
+    display.print(battery);
+    display.println("%");
 }
 
-void Display::clear() {
-    display.clearDisplay();
-    display.display();
-}
-
-void Display::setBrightness(uint8_t brightness) {
-    display.ssd1306_command(SSD1306_SETCONTRAST);
-    display.ssd1306_command(brightness);
-}
-
-void Display::toggleDisplayMode() {
-    detailedMode = !detailedMode;
+void Display::displaySettingsPage() {
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    
+    display.setCursor(0, 0);
+    display.println("Settings");
+    
+    display.setCursor(0, 16);
+    display.print("Mode: ");
+    display.println(detailedMode ? "Detailed" : "Basic");
+    
+    display.setCursor(0, 32);
+    display.print("Auto Page: ");
+    display.println(autoPageChange ? "ON" : "OFF");
+    
+    display.setCursor(0, 48);
+    display.print("Interval: ");
+    display.print(pageChangeInterval / 1000);
+    display.println("s");
 }
