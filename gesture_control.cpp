@@ -121,4 +121,3 @@ void GestureControl::updateGestureMapping(GestureType gesture, const String& act
 bool GestureControl::validateGesture(GestureType gesture) {
     return gesture != NONE_GESTURE;
 }
-asa
