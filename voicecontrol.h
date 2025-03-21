@@ -47,3 +47,6 @@ private:
     // Helper methods
     String extractParameters(const String& audioInput);
     void logVoiceActivity(const String& command, bool success);
+};
+
+#endif
