@@ -141,5 +141,5 @@ void SmartScenes::saveScenes() {
 void SmartScenes::loadScenes() {
     // Load scenes from EEPROM or storage
 }
-
+as
 00a
