@@ -315,3 +315,99 @@ void Automation::handleEmergency(const String& type) {
         evacuationProtocol();
     }
 }
+
+void Automation::addAutomationRule(const AutomationRule& rule) {
+    rules.push_back(rule);
+    std::sort(rules.begin(), rules.end(), 
+              [](const AutomationRule& a, const AutomationRule& b) {
+                  return a.priority > b.priority;
+              });
+}
+
+void Automation::removeAutomationRule(const String& condition) {
+    rules.erase(
+        std::remove_if(rules.begin(), rules.end(),
+                      [&](const AutomationRule& rule) {
+                          return rule.condition == condition;
+                      }),
+        rules.end());
+}
+
+void Automation::processAutomationRules() {
+    unsigned long currentTime = millis();
+    for (auto& rule : rules) {
+        if (!rule.enabled) continue;
+        
+        if (evaluateCondition(rule.condition)) {
+            if (currentTime - rule.lastTriggered > 60000) { // 1-minute minimum interval
+                executeAction(rule.action);
+                rule.lastTriggered = currentTime;
+            }
+        }
+    }
+}
+
+void Automation::optimizeEnergyUsage(bool enableML) {
+    if (enableML) {
+        // Use machine learning to predict optimal settings
+        float predictedUsage = mlModel.predictEnergyUsage();
+        float optimalTemp = mlModel.getOptimalTemperature();
+        
+        targetTemperature = optimalTemp;
+        adjustHVACSchedule(predictedUsage);
+    }
+    
+    // Implement peak load shifting
+    if (isPeakHour()) {
+        deferNonEssentialLoads();
+        activateStoredEnergy();
+    }
+    
+    // Optimize renewable energy usage
+    if (getSolarProduction() > baselineConsumption * 0.8) {
+        scheduleHighConsumptionTasks();
+    }
+}
+
+void Automation::analyzeBehaviorPatterns() {
+    static std::vector<ActivityData> activityLog;
+    
+    // Update activity patterns
+    int currentHour = (millis() / 3600000) % 24;
+    activityPatterns[currentHour]++;
+    
+    // Analyze patterns
+    if (activityLog.size() >= 168) { // One week of hourly data
+        updateBehaviorModel(activityLog);
+        activityLog.clear();
+    }
+}
+
+void Automation::predictMaintenanceNeeds() {
+    // Analyze system performance metrics
+    SystemMetrics metrics = collectSystemMetrics();
+    
+    // Predict maintenance needs using ML model
+    MaintenancePrediction prediction = mlModel.predictMaintenance(metrics);
+    
+    if (prediction.requiresMaintenance) {
+        scheduleMaintenance(prediction);
+        notifyMaintenanceNeeded(prediction.components);
+    }
+}
+
+void Automation::generateEfficiencyReport() {
+    EfficiencyReport report;
+    
+    // Calculate energy efficiency
+    report.energyEfficiency = calculateEnergyEfficiency();
+    report.waterEfficiency = calculateWaterEfficiency();
+    report.hvacEfficiency = calculateHVACEfficiency();
+    
+    // Generate recommendations
+    report.recommendations = generateEfficiencyRecommendations();
+    
+    // Store report
+    storeEfficiencyReport(report);
+}
+
