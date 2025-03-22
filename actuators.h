@@ -1,124 +1,126 @@
-#ifndef AUTOMATION_H
-#define AUTOMATION_H
+#ifndef ACTUATORS_H
+#define ACTUATORS_H
 
 #include <Arduino.h>
-#include <vector>
-#include "sensors.h"
-#include "actuators.h"
+#include <Servo.h>
+#include <FastLED.h>
 
-enum CommandType {
-    NONE,
-    SET_MODE,
-    SET_THRESHOLD,
-    CONTROL_DEVICE,
-    UPDATE_SCHEDULE,
-    SCENE_CONTROL,
-    AUTOMATION_RULE
+enum FanSpeed {
+    OFF = 0,
+    LOW = 85,
+    MEDIUM = 170,
+    HIGH = 255
 };
 
-struct Command {
-    CommandType type;
-    String target;
-    float value;
-    String parameters;
+enum DoorState {
+    LOCKED,
+    UNLOCKED,
+    PARTIALLY_OPEN
 };
 
-struct SystemSettings {
-    bool autoMode;
-    bool energySaveMode;
-    bool gardenMode;
-    struct {
-        float temperature;
-        float humidity;
-        float light;
-        float moisture;
-    } thresholds;
+enum LightMode {
+    NORMAL,
+    AMBIENT,
+    NIGHT,
+    PARTY,
+    ALERT
 };
 
-struct EnergyStats {
-    float currentConsumption;
-    float dailyConsumption;
-    float weeklyConsumption;
-    float monthlyConsumption;
-    float savingsPercentage;
-    float peakUsage;
-    float offPeakUsage;
-    float renewableUsage;
-};
-
-struct SecurityEvent {
-    unsigned long timestamp;
-    bool motion;
-    float lightLevel;
-    String location;
-    int severity;
-};
-
-struct ComfortFactors {
-    float temperature;
-    float humidity;
-    float airQuality;
-    float light;
-    float noise;
-    float pressure;
-};
-
-struct AutomationRule {
-    String condition;
-    String action;
-    bool enabled;
-    unsigned long lastTriggered;
-    int priority;
-};
-
-class Automation {
+class Actuators {
 public:
-    Automation();
+    Actuators(uint8_t ledPin, uint8_t fanPin, uint8_t buzzerPin, uint8_t servoPin, uint8_t windowServoPin);
     void begin();
     
-    // Main control functions
-    void handleClimateControl(const SensorData& data, const WeatherData& forecast);
-    void handleGardenCare(const SensorData& data, const WeatherData& forecast);
-    void handleEnergyManagement(const SensorData& data);
-    void handleSecurity(const SensorData& data);
-    void optimizeComfort(const SensorData& data);
+    // Enhanced lighting control
+    void setLight(int brightness);
+    void fadeLight(int targetBrightness, int duration);
+    void pulseLight(int duration);
+    void setLightMode(LightMode mode);
+    void setAmbientColor(uint8_t r, uint8_t g, uint8_t b);
+    void startLightShow(int duration);
     
-    // Mode management
-    void setMode(const String& mode, bool enabled);
-    void setThresholds(const SystemSettings::thresholds& newThresholds);
+    // Advanced fan control
+    void setFan(FanSpeed speed);
+    void setFanAutoMode(bool enabled, float tempThreshold);
+    void setFanSchedule(int startHour, int endHour, FanSpeed speed);
+    void updateFanControl(float temperature, float humidity);
     
-    // Schedule management
-    void updateSchedule(const String& device, const Schedule& schedule);
-    void checkSchedules();
+    // Extended buzzer functionality
+    void triggerBuzzer(unsigned long duration);
+    void playMelody(const int* notes, const int* durations, int count);
+    void stopBuzzer();
+    void setAlarm(int hour, int minute, const int* melody, const int* durations, int count);
     
-    // Weather adaptation
-    void updateWeatherStrategy(const WeatherData& forecast);
+    // Smart door control
+    void setDoorState(DoorState state);
+    DoorState getDoorState();
+    void autoCloseDoor(unsigned long delay);
+    void setDoorSchedule(int openHour, int closeHour);
     
-    // Command handling
-    void handleCommand(const Command& cmd);
+    // Window control
+    void setWindowOpening(int percentage);
+    int getWindowOpening();
+    void setWindowSchedule(int openHour, int closeHour);
+    void updateWindowControl(float temperature, bool isRaining);
     
-    // Statistics and reporting
-    EnergyStats getEnergyStats() const;
-    float getComfortIndex() const;
-    
-    // New Advanced Features
-    void addAutomationRule(const AutomationRule& rule);
-    void removeAutomationRule(const String& condition);
-    void processAutomationRules();
-    void optimizeEnergyUsage(bool enableML = true);
-    void analyzeBehaviorPatterns();
-    void predictMaintenanceNeeds();
-    void generateEfficiencyReport();
-    void handleEmergencyScenario(const String& scenario);
-    void updateAIModel(const SensorData& data);
-    void adjustForSeasonalChanges();
-    void manageLoadBalancing();
-    void optimizeHVACSchedule();
-    String getSecurityStatus() const;
-    void notifyAuthorities();
-    void evacuationProtocol();
+    // System control
+    void emergencyShutdown();
+    void restoreSystem();
+    bool isSystemActive();
+    void setNightMode(bool enabled);
+    void setVacationMode(bool enabled);
     
 private:
+    uint8_t ledPin;
+    uint8_t fanPin;
+    uint8_t buzzerPin;
+    Servo doorServo;
+    Servo windowServo;
+    CRGB* leds;
+    
     // System states
+    int currentLightLevel;
+    FanSpeed currentFanSpeed;
+    DoorState currentDoorState;
+    int currentWindowOpening;
+    bool systemActive;
+    bool autoFanMode;
     bool nightMode;
     bool vacationMode;
+    
+    // Control parameters
+    float fanTempThreshold;
+    unsigned long lastDoorOperation;
+    unsigned long autoCloseTime;
+    
+    // Scheduling
+    struct Schedule {
+        int startHour;
+        int endHour;
+        bool enabled;
+        union {
+            FanSpeed fanSpeed;
+            int windowOpening;
+            DoorState doorState;
+        };
+    };
+    
+    Schedule fanSchedule;
+    Schedule windowSchedule;
+    Schedule doorSchedule;
+    
+    // Light show parameters
+    struct LightShow {
+        bool active;
+        unsigned long startTime;
+        unsigned long duration;
+        uint8_t currentPattern;
+    } lightShow;
+    
+    // Helper methods
+    void updateLightShow();
+    void handleSchedules();
+    void checkAlarms();
+};
+
+#endif
