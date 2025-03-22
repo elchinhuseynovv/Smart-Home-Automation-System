@@ -446,5 +446,16 @@ void Automation::updateAIModel(const SensorData& data) {
     updateModelAccuracy();
 }
 
-
+void Automation::adjustForSeasonalChanges() {
+    Season currentSeason = determineCurrentSeason();
+    
+    // Adjust comfort parameters
+    adjustComfortParameters(currentSeason);
+    
+    // Update energy baselines
+    updateSeasonalBaselines(currentSeason);
+    
+    // Modify automation rules
+    updateSeasonalRules(currentSeason);
 }
+
