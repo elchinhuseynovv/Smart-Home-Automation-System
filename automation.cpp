@@ -459,3 +459,39 @@ void Automation::adjustForSeasonalChanges() {
     updateSeasonalRules(currentSeason);
 }
 
+void Automation::manageLoadBalancing() {
+    std::vector<Device> activeDevices = getActiveDevices();
+    float totalLoad = calculateTotalLoad(activeDevices);
+    
+    if (totalLoad > maxLoadThreshold) {
+        prioritizeDevices(activeDevices);
+        redistributeLoad(activeDevices);
+    }
+    
+    optimizePowerDistribution();
+}
+
+void Automation::optimizeHVACSchedule() {
+    // Get occupancy prediction
+    OccupancyPrediction occupancy = predictOccupancy();
+    
+    // Calculate optimal start/stop times
+    HVACSchedule schedule = calculateOptimalHVACSchedule(occupancy);
+    
+    // Apply new schedule
+    updateHVACSchedule(schedule);
+    
+    // Monitor performance
+    trackHVACEfficiency();
+}
+
+String Automation::getSecurityStatus() const {
+    SecurityStatus status;
+    status.perimeterSecure = checkPerimeterStatus();
+    status.motionDetected = checkMotionStatus();
+    status.doorsLocked = checkDoorStatus();
+    status.windowsSecured = checkWindowStatus();
+    
+    return formatSecurityStatus(status);
+}
+
