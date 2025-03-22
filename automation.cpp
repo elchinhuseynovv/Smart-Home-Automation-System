@@ -411,3 +411,40 @@ void Automation::generateEfficiencyReport() {
     storeEfficiencyReport(report);
 }
 
+void Automation::handleEmergencyScenario(const String& scenario) {
+    EmergencyProtocol protocol = determineEmergencyProtocol(scenario);
+    
+    switch (protocol.type) {
+        case FIRE:
+            activateFireProtocol();
+            break;
+        case FLOOD:
+            activateFloodProtocol();
+            break;
+        case SECURITY_BREACH:
+            activateSecurityProtocol();
+            break;
+        case POWER_FAILURE:
+            activateBackupPower();
+            break;
+    }
+    
+    notifyEmergencyContacts(protocol);
+}
+
+void Automation::updateAIModel(const SensorData& data) {
+    // Update training data
+    mlModel.addTrainingData(data);
+    
+    // Periodically retrain model
+    if (millis() - lastModelUpdate > modelUpdateInterval) {
+        mlModel.retrain();
+        lastModelUpdate = millis();
+    }
+    
+    // Update prediction accuracy metrics
+    updateModelAccuracy();
+}
+
+
+}
