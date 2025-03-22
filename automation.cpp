@@ -5,133 +5,196 @@ Automation::Automation()
       tempThreshold(25.0), humidityThreshold(60.0), lightThreshold(300),
       moistureThreshold(40.0), targetTemperature(23.0), targetHumidity(50.0),
       comfortIndex(0.0), baselineConsumption(1000.0), rainExpected(false),
-      forecastTemperature(0.0) {
+      forecastTemperature(0.0), learningEnabled(true), adaptiveMode(true),
+      lastOptimization(0), optimizationInterval(3600000) { // 1 hour
     
     // Initialize energy stats
     energyStats = {0.0, 0.0, 0.0, 0.0, 0.0};
+    
+    // Initialize learning parameters
+    for (int i = 0; i < 24; i++) {
+        temperaturePreferences[i] = 23.0;
+        lightingPreferences[i] = 200;
+        activityPatterns[i] = 0;
+    }
 }
 
 void Automation::begin() {
-    // Initialize baseline values and load saved settings
     calculateEnergySavings();
+    loadUserPreferences();
+    initializeML();
 }
 
 void Automation::handleClimateControl(const SensorData& data, const WeatherData& forecast) {
-    // Predictive climate control based on weather forecast
-    if (forecast.temperature > data.temperature + 2) {
-        // Prepare for temperature increase
-        if (data.temperature < targetTemperature) {
-            actuators.setFan(LOW);
-        }
-    } else if (forecast.temperature < data.temperature - 2) {
-        // Prepare for temperature decrease
-        if (data.temperature > targetTemperature) {
-            actuators.setFan(MEDIUM);
+    // Predictive climate control with machine learning
+    float predictedTemp = mlModel.predictTemperature(data, forecast);
+    float optimalTemp = calculateOptimalTemperature(data.temperature, forecast);
+    
+    // Advanced thermal management
+    if (abs(data.temperature - optimalTemp) > 0.5) {
+        if (data.temperature < optimalTemp) {
+            if (forecast.temperature > data.temperature + 2) {
+                // Natural heating possible
+                actuators.setWindowOpening(calculateOptimalOpening(data, forecast));
+                actuators.setFan(LOW);
+            } else {
+                activateHeating(optimalTemp - data.temperature);
+            }
+        } else {
+            if (forecast.temperature < data.temperature - 2) {
+                // Natural cooling possible
+                actuators.setWindowOpening(calculateOptimalOpening(data, forecast));
+                actuators.setFan(MEDIUM);
+            } else {
+                activateCooling(data.temperature - optimalTemp);
+            }
         }
     }
     
-    // Adjust for current conditions
-    adjustClimateControl(data.temperature, data.humidity);
+    // Smart ventilation with CO2 monitoring
+    if (data.co2Level > 1000) {
+        actuators.activateVentilation();
+        if (!data.isRaining && data.temperature > 15) {
+            actuators.setWindowOpening(50);
+        }
+    }
     
-    // Handle rain prediction
-    if (forecast.rainProbability > 70 && !data.isRaining) {
-        actuators.setWindowOpening(0);
-        display.showAlert("Rain expected - Windows closed");
+    // Humidity balance with dew point calculation
+    float dewPoint = calculateDewPoint(data.temperature, data.humidity);
+    if (dewPoint > data.temperature - 2) {
+        actuators.activateDehumidifier();
+    } else if (data.humidity < 30) {
+        actuators.activateHumidifier();
     }
 }
 
 void Automation::handleGardenCare(const SensorData& data, const WeatherData& forecast) {
-    // Smart irrigation control
+    // Smart irrigation with soil analysis
     if (data.soilMoisture < moistureThreshold) {
         if (!rainExpected && data.temperature < 30) {
-            // Water the garden if no rain is expected and it's not too hot
-            actuators.startIrrigation();
+            float waterAmount = calculateOptimalWatering(data, forecast);
+            actuators.startIrrigation(waterAmount);
         }
     }
     
-    // UV protection
+    // Plant protection system
     if (data.uvIndex > 8.0) {
         actuators.deployShade();
-        display.showAlert("High UV - Shade deployed");
+        if (data.soilMoisture < moistureThreshold + 10) {
+            actuators.startMisting(); // Prevent leaf burn
+        }
     }
     
-    // Frost protection
+    // Frost protection with temperature gradient monitoring
     if (forecast.temperature < 2.0) {
         actuators.activateFrostProtection();
+        actuators.startSoilHeating();
+    }
+    
+    // Disease prevention
+    if (data.humidity > 85 && data.temperature > 20) {
+        actuators.activateAirCirculation();
+        actuators.adjustGreenhouseVents(30);
     }
 }
 
 void Automation::handleEnergyManagement(const SensorData& data) {
+    static unsigned long lastPeakCheck = 0;
     float currentConsumption = 0.0;
     
-    // Optimize HVAC usage
-    if (abs(data.temperature - targetTemperature) < 1.0) {
-        actuators.setFan(OFF);
-        currentConsumption += 0;
-    } else {
-        currentConsumption += actuators.getFanPower();
+    // Real-time load balancing
+    if (millis() - lastPeakCheck > 300000) { // 5-minute intervals
+        if (isPeakHour()) {
+            shiftLoads();
+        }
+        lastPeakCheck = millis();
     }
     
-    // Lighting optimization
-    if (data.lightLevel > lightThreshold) {
-        actuators.setLight(0);
-    } else {
-        currentConsumption += actuators.getLightPower();
+    // Smart appliance coordination
+    if (currentConsumption > baselineConsumption * 1.2) {
+        prioritizeLoads();
     }
     
-    // Update energy statistics
-    energyStats.currentConsumption = currentConsumption;
-    calculateEnergySavings();
+    // Renewable energy optimization
+    if (getSolarProduction() > currentConsumption) {
+        storeExcessEnergy();
+    }
+    
+    // Adaptive baseline calculation
+    updateBaselineConsumption();
+    
+    // Update energy statistics with machine learning predictions
+    updateEnergyStats(currentConsumption);
+    predictFutureConsumption();
 }
 
 void Automation::handleSecurity(const SensorData& data) {
     static unsigned long lastMotion = 0;
     static int motionCount = 0;
+    static std::vector<SecurityEvent> securityLog;
     
-    // Motion detection logic
+    // Advanced motion analysis
     if (data.motion) {
+        SecurityEvent event = {millis(), data.motion, data.lightLevel};
+        securityLog.push_back(event);
+        
+        if (analyzeMotionPattern(securityLog)) {
+            handleSuspiciousActivity();
+        }
+        
         if (vacationMode) {
             handleEmergency("SECURITY");
             return;
         }
-        
-        unsigned long currentTime = millis();
-        if (currentTime - lastMotion < 60000) { // Within 1 minute
-            motionCount++;
-            if (motionCount > 5) { // Excessive motion
-                actuators.setLightMode(ALERT);
-                display.showAlert("Unusual activity detected!");
-            }
-        } else {
-            motionCount = 1;
-        }
-        lastMotion = currentTime;
     }
     
-    // Environmental security
-    if (data.airQuality < 30) {
-        actuators.activateVentilation();
-        display.showAlert("Poor air quality - Ventilating");
+    // Perimeter monitoring
+    if (checkPerimeterBreach(data)) {
+        activateSecurityResponse();
+    }
+    
+    // Environmental hazard detection
+    if (data.airQuality < 30 || data.gasLevel > 100) {
+        handleEmergency("ENVIRONMENTAL");
+    }
+    
+    // Smart camera control
+    updateCameraCoverage(data.motion);
+    
+    // Regular security checks
+    if (millis() - lastSecurityCheck > 3600000) { // Hourly
+        performSecurityAudit();
     }
 }
 
 void Automation::optimizeComfort(const SensorData& data) {
-    // Calculate comfort index based on multiple factors
-    float tempFactor = 1.0 - abs(data.temperature - targetTemperature) / 10.0;
-    float humidityFactor = 1.0 - abs(data.humidity - targetHumidity) / 30.0;
-    float airQualityFactor = data.airQuality / 100.0;
+    // Multi-factor comfort analysis
+    ComfortFactors factors;
+    factors.temperature = 1.0 - abs(data.temperature - targetTemperature) / 10.0;
+    factors.humidity = 1.0 - abs(data.humidity - targetHumidity) / 30.0;
+    factors.airQuality = data.airQuality / 100.0;
+    factors.light = calculateLightComfort(data.lightLevel);
+    factors.noise = calculateNoiseComfort(data.noiseLevel);
     
-    comfortIndex = (tempFactor + humidityFactor + airQualityFactor) / 3.0 * 100.0;
+    // Calculate weighted comfort index
+    comfortIndex = calculateWeightedComfort(factors);
     
-    // Adjust systems based on comfort index
-    if (comfortIndex < 60) {
-        // Comfort is low, take corrective action
-        if (data.temperature != targetTemperature) {
-            adjustClimateControl(data.temperature, data.humidity);
-        }
-        if (data.airQuality < 50) {
-            actuators.activateVentilation();
-        }
+    // Adaptive comfort optimization
+    if (learningEnabled) {
+        updateComfortPreferences(data, comfortIndex);
+    }
+    
+    // Implement comfort improvements
+    if (comfortIndex < 70) {
+        prioritizeComfortImprovements(factors);
+    }
+    
+    // Circadian rhythm optimization
+    adjustLightingForTimeOfDay();
+    
+    // Air quality management
+    if (data.airQuality < 80) {
+        improveAirQuality(data);
     }
 }
 
@@ -240,7 +303,15 @@ void Automation::handleEmergency(const String& type) {
     if (type == "SECURITY") {
         actuators.setLightMode(ALERT);
         actuators.triggerAlarm();
+        actuators.lockDownPerimeter();
+        notifyAuthorities();
         display.showAlert("Security Alert!");
-        // Additional security measures
+        logSecurityEvent();
+    } else if (type == "ENVIRONMENTAL") {
+        actuators.activateEmergencyVentilation();
+        actuators.shutOffGasSupply();
+        actuators.setWindowOpening(100);
+        display.showAlert("Environmental Hazard!");
+        evacuationProtocol();
     }
 }
