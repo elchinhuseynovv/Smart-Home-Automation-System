@@ -495,3 +495,36 @@ String Automation::getSecurityStatus() const {
     return formatSecurityStatus(status);
 }
 
+void Automation::notifyAuthorities() {
+    EmergencyContact police = {"Police", "911"};
+    EmergencyContact fireService = {"Fire", "911"};
+    
+    if (securityBreach) {
+        notifyEmergencyService(police);
+    }
+    if (fireDetected) {
+        notifyEmergencyService(fireService);
+    }
+    
+    logEmergencyEvent();
+}
+
+void Automation::evacuationProtocol() {
+    // Activate emergency lighting
+    actuators.setLightMode(EMERGENCY);
+    
+    // Unlock all doors
+    actuators.unlockAllDoors();
+    
+    // Activate emergency ventilation
+    actuators.activateEmergencyVentilation();
+    
+    // Sound evacuation alarm
+    actuators.triggerEvacuationAlarm();
+    
+    // Send notifications
+    notifyEmergencyContacts();
+    
+    // Log evacuation event
+    logEvacuationEvent();
+}
