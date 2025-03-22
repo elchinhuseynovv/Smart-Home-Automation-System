@@ -101,3 +101,24 @@ public:
     EnergyStats getEnergyStats() const;
     float getComfortIndex() const;
     
+    // New Advanced Features
+    void addAutomationRule(const AutomationRule& rule);
+    void removeAutomationRule(const String& condition);
+    void processAutomationRules();
+    void optimizeEnergyUsage(bool enableML = true);
+    void analyzeBehaviorPatterns();
+    void predictMaintenanceNeeds();
+    void generateEfficiencyReport();
+    void handleEmergencyScenario(const String& scenario);
+    void updateAIModel(const SensorData& data);
+    void adjustForSeasonalChanges();
+    void manageLoadBalancing();
+    void optimizeHVACSchedule();
+    String getSecurityStatus() const;
+    void notifyAuthorities();
+    void evacuationProtocol();
+    
+private:
+    // System states
+    bool nightMode;
+    bool vacationMode;
