@@ -2,6 +2,7 @@
 #define AUTOMATION_H
 
 #include <Arduino.h>
+#include <vector>
 #include "sensors.h"
 #include "actuators.h"
 
@@ -10,7 +11,9 @@ enum CommandType {
     SET_MODE,
     SET_THRESHOLD,
     CONTROL_DEVICE,
-    UPDATE_SCHEDULE
+    UPDATE_SCHEDULE,
+    SCENE_CONTROL,
+    AUTOMATION_RULE
 };
 
 struct Command {
@@ -38,6 +41,34 @@ struct EnergyStats {
     float weeklyConsumption;
     float monthlyConsumption;
     float savingsPercentage;
+    float peakUsage;
+    float offPeakUsage;
+    float renewableUsage;
+};
+
+struct SecurityEvent {
+    unsigned long timestamp;
+    bool motion;
+    float lightLevel;
+    String location;
+    int severity;
+};
+
+struct ComfortFactors {
+    float temperature;
+    float humidity;
+    float airQuality;
+    float light;
+    float noise;
+    float pressure;
+};
+
+struct AutomationRule {
+    String condition;
+    String action;
+    bool enabled;
+    unsigned long lastTriggered;
+    int priority;
 };
 
 class Automation {
@@ -70,12 +101,31 @@ public:
     EnergyStats getEnergyStats() const;
     float getComfortIndex() const;
     
+    // New Advanced Features
+    void addAutomationRule(const AutomationRule& rule);
+    void removeAutomationRule(const String& condition);
+    void processAutomationRules();
+    void optimizeEnergyUsage(bool enableML = true);
+    void analyzeBehaviorPatterns();
+    void predictMaintenanceNeeds();
+    void generateEfficiencyReport();
+    void handleEmergencyScenario(const String& scenario);
+    void updateAIModel(const SensorData& data);
+    void adjustForSeasonalChanges();
+    void manageLoadBalancing();
+    void optimizeHVACSchedule();
+    String getSecurityStatus() const;
+    void notifyAuthorities();
+    void evacuationProtocol();
+    
 private:
     // System states
     bool nightMode;
     bool vacationMode;
     bool partyMode;
     bool ecoMode;
+    bool learningEnabled;
+    bool adaptiveMode;
     
     // Thresholds
     float tempThreshold;
@@ -96,13 +146,51 @@ private:
     bool rainExpected;
     float forecastTemperature;
     
+    // Learning parameters
+    float temperaturePreferences[24];
+    int lightingPreferences[24];
+    int activityPatterns[24];
+    unsigned long lastOptimization;
+    unsigned long optimizationInterval;
+    unsigned long lastSecurityCheck;
+    
+    // Automation rules
+    std::vector<AutomationRule> rules;
+    
     // Helper methods
     void adjustClimateControl(float temperature, float humidity);
-    void optimizeLighting(float lightLevel, bool motion);
-    void manageEnergySaving(const SensorData& data);
-    void updateComfortIndex(const SensorData& data);
     void calculateEnergySavings();
     void handleEmergency(const String& type);
+    void loadUserPreferences();
+    void initializeML();
+    float calculateOptimalTemperature(float currentTemp, const WeatherData& forecast);
+    float calculateOptimalOpening(const SensorData& data, const WeatherData& forecast);
+    void activateHeating(float difference);
+    void activateCooling(float difference);
+    float calculateDewPoint(float temperature, float humidity);
+    float calculateOptimalWatering(const SensorData& data, const WeatherData& forecast);
+    bool isPeakHour() const;
+    void shiftLoads();
+    void prioritizeLoads();
+    float getSolarProduction() const;
+    void storeExcessEnergy();
+    void updateBaselineConsumption();
+    void updateEnergyStats(float consumption);
+    void predictFutureConsumption();
+    bool analyzeMotionPattern(const std::vector<SecurityEvent>& events);
+    void handleSuspiciousActivity();
+    bool checkPerimeterBreach(const SensorData& data);
+    void activateSecurityResponse();
+    void updateCameraCoverage(bool motion);
+    void performSecurityAudit();
+    float calculateLightComfort(float lightLevel);
+    float calculateNoiseComfort(float noiseLevel);
+    float calculateWeightedComfort(const ComfortFactors& factors);
+    void updateComfortPreferences(const SensorData& data, float comfort);
+    void prioritizeComfortImprovements(const ComfortFactors& factors);
+    void adjustLightingForTimeOfDay();
+    void improveAirQuality(const SensorData& data);
+    void logSecurityEvent();
 };
 
 #endif
