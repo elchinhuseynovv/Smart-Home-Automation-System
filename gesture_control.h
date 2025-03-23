@@ -61,3 +61,36 @@ public:
     void getGestureStats(int& recognized, int& failed);
     String getLastGestureName();
     
+private:
+    uint8_t sensorPin;
+    float sensitivity;
+    bool isCalibrated;
+    GestureConfig config;
+    
+    // Gesture processing
+    float gestureData[3][10]; // Store x,y,z coordinates
+    int gestureIndex;
+    unsigned long lastGestureTime;
+    unsigned long gestureTimeout;
+    
+    // Gesture learning
+    bool isLearning;
+    String learningGestureName;
+    std::vector<float> learningData;
+    
+    // Gesture statistics
+    int recognizedGestures;
+    int failedGestures;
+    String lastGesture;
+    
+    // Helper methods
+    void processGestureData();
+    float calculateGestureConfidence(const float* data);
+    void updateGestureMapping(GestureType gesture, const String& action);
+    bool validateGesture(GestureType gesture);
+    void processSequence(GestureType gesture);
+    float compareGesturePatterns(const float* pattern1, const float* pattern2, int length);
+    void updateGestureStats(bool recognized);
+};
+
+#endif
