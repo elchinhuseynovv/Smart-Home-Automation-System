@@ -12,7 +12,21 @@ enum GestureType {
     SWIPE_DOWN,
     CIRCLE,
     WAVE,
-    HOLD
+    HOLD,
+    DOUBLE_TAP,
+    PINCH,
+    SPREAD,
+    ROTATE_CW,
+    ROTATE_CCW,
+    ZIGZAG
+};
+
+struct GestureConfig {
+    float sensitivity;
+    int holdDuration;
+    int doubleTapInterval;
+    float motionThreshold;
+    bool enabled;
 };
 
 class GestureControl {
@@ -20,31 +34,30 @@ public:
     GestureControl(uint8_t sensorPin);
     void begin();
     
-    // Gesture detection
+    // Enhanced gesture detection
     void updateGestures();
     GestureType detectGesture();
     void handleGesture(GestureType gesture);
     
-    // Gesture configuration
+    // Advanced configuration
     void setGestureSensitivity(float sensitivity);
     void calibrateSensor();
     void mapGestureToAction(GestureType gesture, const String& action);
+    void setGestureConfig(const GestureConfig& config);
     
-private:
-    uint8_t sensorPin;
-    float sensitivity;
-    bool isCalibrated;
+    // New gesture features
+    void enableGestureType(GestureType type, bool enabled);
+    void setGestureTimeout(unsigned long timeout);
+    void setGestureSequence(GestureType sequence[], int length);
+    bool recognizeSequence();
     
-    // Gesture processing
-    float gestureData[3][10]; // Store x,y,z coordinates
-    int gestureIndex;
-    unsigned long lastGestureTime;
+    // Gesture learning
+    void startGestureLearning(const String& gestureName);
+    void stopGestureLearning();
+    void saveLearnedGesture();
     
-    // Helper methods
-    void processGestureData();
-    float calculateGestureConfidence(const float* data);
-    void updateGestureMapping(GestureType gesture, const String& action);
-    bool validateGesture(GestureType gesture);
-};
-
-#endif
+    // Gesture analytics
+    float getGestureAccuracy();
+    void getGestureStats(int& recognized, int& failed);
+    String getLastGestureName();
+    
