@@ -205,3 +205,9 @@ private:
     unsigned long lastSecurityCheck;
     
     std::vector<AutomationRule> rules;
+    
+    // New private members
+    std::vector<MaintenanceSchedule> maintenanceSchedules;
+    std::vector<SecurityZone> securityZones;
+    EnergyProfile energyProfile;
+    
