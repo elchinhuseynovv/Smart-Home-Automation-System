@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Automation System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .sensor-data {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .value {
+            font-weight: bold;
+            color: #1a73e8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Home Automation System</h1>
+        <div class="sensor-data">
+            <h2>Sensor Readings</h2>
+            <p>Temperature: <span id="temperature" class="value">--</span>°C</p>
+            <p>Humidity: <span id="humidity" class="value">--</span>%</p>
+            <p>Motion Detected: <span id="motion" class="value">--</span></p>
+            <p>Light Level: <span id="light" class="value">--</span></p>
+            <p>Air Quality: <span id="airQuality" class="value">--</span></p>
+            <p>Last Update: <span id="timestamp" class="value">--</span></p>
+        </div>
+    </div>
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // Update DOM with sensor data
+            document.getElementById('temperature').textContent = data.temperature.toFixed(1);
+            document.getElementById('humidity').textContent = data.humidity.toFixed(1);
+            document.getElementById('motion').textContent = data.motion ? 'Yes' : 'No';
+            document.getElementById('light').textContent = data.light;
+            document.getElementById('airQuality').textContent = data.airQuality.toFixed(1);
+            document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
+        };
+        
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+        
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+    </script>
+</body>
+</html>
