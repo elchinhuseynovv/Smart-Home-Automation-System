@@ -103,3 +103,38 @@ private:
     Adafruit_BMP280 bmp;
     MQ135 airSensor;
     
+    // Configuration
+    SensorCalibration calibration;
+    SensorThresholds thresholds;
+    unsigned long updateInterval;
+    
+    // State tracking
+    unsigned long lastMotionTime;
+    bool motionState;
+    unsigned long lastUpdate;
+    bool sensorError;
+    
+    // History tracking for trends
+    static const int HISTORY_SIZE = 24; // Extended history
+    float tempHistory[HISTORY_SIZE];
+    float humidityHistory[HISTORY_SIZE];
+    float pressureHistory[HISTORY_SIZE];
+    float airQualityHistory[HISTORY_SIZE];
+    int historyIndex;
+    
+    // Error logging
+    String errorLog;
+    int errorCount;
+    
+    // Helper methods
+    float calculateAverage(float readings[], int count);
+    float calculateTrend(float history[], int count);
+    void updateHistory(float value, float history[]);
+    float calculateDewPoint(float temperature, float humidity);
+    void logError(const String& error);
+    bool validateReading(float value, float min, float max);
+    void updateSensorStatus();
+    float applyCalibration(float value, float offset);
+};
+
+#endif
