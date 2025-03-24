@@ -45,6 +45,10 @@
         button:hover {
             background-color: #1557b0;
         }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         .status {
             padding: 8px;
             border-radius: 4px;
@@ -58,9 +62,26 @@
             background-color: #fce8e6;
             color: #c5221f;
         }
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connection-status.connected {
+            background-color: #e6f4ea;
+            color: #137333;
+        }
+        .connection-status.disconnected {
+            background-color: #fce8e6;
+            color: #c5221f;
+        }
     </style>
 </head>
 <body>
+    <div id="connectionStatus" class="connection-status disconnected">Disconnected</div>
     <div class="container">
         <h1>Smart Home Automation System</h1>
         
@@ -104,52 +125,111 @@
                 <label for="lightControl">Light Level:</label>
                 <input type="range" id="lightControl" min="0" max="255" value="0" 
                        oninput="setLight(this.value)">
+                <span id="lightValue">0</span>
             </div>
         </div>
     </div>
 
     <script>
-        const ws = new WebSocket(`ws://${window.location.host}`);
+        let ws;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000;
         
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+        function connect() {
+            ws = new WebSocket(`ws://${window.location.host}`);
             
-            // Update sensor readings
-            document.getElementById('temperature').textContent = data.temperature.toFixed(1);
-            document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-            document.getElementById('motion').textContent = data.motion ? 'Yes' : 'No';
-            document.getElementById('light').textContent = data.light;
-            document.getElementById('airQuality').textContent = data.airQuality.toFixed(1);
-            document.getElementById('doorState').textContent = data.doorState;
-            document.getElementById('windowOpening').textContent = data.windowOpening;
-            document.getElementById('fanSpeed').textContent = data.fanSpeed;
-            document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
-        };
+            ws.onopen = () => {
+                console.log('Connected to server');
+                document.getElementById('connectionStatus').className = 'connection-status connected';
+                document.getElementById('connectionStatus').textContent = 'Connected';
+                reconnectAttempts = 0;
+                enableControls(true);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.error) {
+                        console.error('Server error:', data.error);
+                        return;
+                    }
+                    
+                    // Update sensor readings
+                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
+                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
+                    document.getElementById('motion').textContent = data.motion ? 'Yes' : 'No';
+                    document.getElementById('light').textContent = data.light;
+                    document.getElementById('airQuality').textContent = data.airQuality.toFixed(1);
+                    document.getElementById('doorState').textContent = data.doorState;
+                    document.getElementById('windowOpening').textContent = data.windowOpening;
+                    document.getElementById('fanSpeed').textContent = data.fanSpeed;
+                    document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
+                    
+                    // Update control states
+                    document.getElementById('lightControl').value = data.lightLevel;
+                    document.getElementById('lightValue').textContent = data.lightLevel;
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket connection closed');
+                document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                document.getElementById('connectionStatus').textContent = 'Disconnected';
+                enableControls(false);
+                
+                // Attempt to reconnect
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                    setTimeout(connect, reconnectDelay);
+                }
+            };
+        }
+        
+        function enableControls(enabled) {
+            const buttons = document.querySelectorAll('button');
+            const inputs = document.querySelectorAll('input');
+            buttons.forEach(button => button.disabled = !enabled);
+            inputs.forEach(input => input.disabled = !enabled);
+        }
         
         // Control functions
+        function sendCommand(command) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(command));
+            } else {
+                console.error('WebSocket is not connected');
+            }
+        }
+
         function setFan(speed) {
-            ws.send(JSON.stringify({ type: 'SET_FAN', value: speed }));
+            sendCommand({ type: 'SET_FAN', value: speed });
         }
 
         function setDoor(state) {
-            ws.send(JSON.stringify({ type: 'SET_DOOR', value: state }));
+            sendCommand({ type: 'SET_DOOR', value: state });
         }
 
         function setWindow(opening) {
-            ws.send(JSON.stringify({ type: 'SET_WINDOW', value: opening }));
+            sendCommand({ type: 'SET_WINDOW', value: opening });
         }
 
         function setLight(level) {
-            ws.send(JSON.stringify({ type: 'SET_LIGHT', value: parseInt(level) }));
+            const value = parseInt(level);
+            document.getElementById('lightValue').textContent = value;
+            sendCommand({ type: 'SET_LIGHT', value: value });
         }
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
-
-        ws.onclose = () => {
-            console.log('WebSocket connection closed');
-        };
+        // Initialize connection
+        connect();
     </script>
 </body>
 </html>
