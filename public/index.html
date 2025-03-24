@@ -14,7 +14,7 @@
             max-width: 800px;
             margin: 0 auto;
         }
-        .sensor-data {
+        .sensor-data, .controls {
             background: white;
             padding: 20px;
             border-radius: 8px;
@@ -25,11 +25,45 @@
             font-weight: bold;
             color: #1a73e8;
         }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .status.success {
+            background-color: #e6f4ea;
+            color: #137333;
+        }
+        .status.error {
+            background-color: #fce8e6;
+            color: #c5221f;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Smart Home Automation System</h1>
+        
         <div class="sensor-data">
             <h2>Sensor Readings</h2>
             <p>Temperature: <span id="temperature" class="value">--</span>°C</p>
@@ -37,28 +71,82 @@
             <p>Motion Detected: <span id="motion" class="value">--</span></p>
             <p>Light Level: <span id="light" class="value">--</span></p>
             <p>Air Quality: <span id="airQuality" class="value">--</span></p>
+            <p>Door State: <span id="doorState" class="value">--</span></p>
+            <p>Window Opening: <span id="windowOpening" class="value">--</span>%</p>
+            <p>Fan Speed: <span id="fanSpeed" class="value">--</span></p>
             <p>Last Update: <span id="timestamp" class="value">--</span></p>
         </div>
+
+        <div class="controls">
+            <h2>Controls</h2>
+            <div class="control-group">
+                <label for="fanSpeed">Fan Speed:</label>
+                <button onclick="setFan('OFF')">Off</button>
+                <button onclick="setFan('LOW')">Low</button>
+                <button onclick="setFan('MEDIUM')">Medium</button>
+                <button onclick="setFan('HIGH')">High</button>
+            </div>
+
+            <div class="control-group">
+                <label for="doorControl">Door Control:</label>
+                <button onclick="setDoor('LOCKED')">Lock</button>
+                <button onclick="setDoor('UNLOCKED')">Unlock</button>
+            </div>
+
+            <div class="control-group">
+                <label for="windowControl">Window Opening:</label>
+                <button onclick="setWindow(0)">Close</button>
+                <button onclick="setWindow(50)">Half</button>
+                <button onclick="setWindow(100)">Full</button>
+            </div>
+
+            <div class="control-group">
+                <label for="lightControl">Light Level:</label>
+                <input type="range" id="lightControl" min="0" max="255" value="0" 
+                       oninput="setLight(this.value)">
+            </div>
+        </div>
     </div>
+
     <script>
         const ws = new WebSocket(`ws://${window.location.host}`);
         
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
-            // Update DOM with sensor data
+            // Update sensor readings
             document.getElementById('temperature').textContent = data.temperature.toFixed(1);
             document.getElementById('humidity').textContent = data.humidity.toFixed(1);
             document.getElementById('motion').textContent = data.motion ? 'Yes' : 'No';
             document.getElementById('light').textContent = data.light;
             document.getElementById('airQuality').textContent = data.airQuality.toFixed(1);
+            document.getElementById('doorState').textContent = data.doorState;
+            document.getElementById('windowOpening').textContent = data.windowOpening;
+            document.getElementById('fanSpeed').textContent = data.fanSpeed;
             document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
         };
         
+        // Control functions
+        function setFan(speed) {
+            ws.send(JSON.stringify({ type: 'SET_FAN', value: speed }));
+        }
+
+        function setDoor(state) {
+            ws.send(JSON.stringify({ type: 'SET_DOOR', value: state }));
+        }
+
+        function setWindow(opening) {
+            ws.send(JSON.stringify({ type: 'SET_WINDOW', value: opening }));
+        }
+
+        function setLight(level) {
+            ws.send(JSON.stringify({ type: 'SET_LIGHT', value: parseInt(level) }));
+        }
+
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
         };
-        
+
         ws.onclose = () => {
             console.log('WebSocket connection closed');
         };
