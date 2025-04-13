@@ -192,3 +192,27 @@ float Sensors::getAveragePressure(int samples) {
     }
     return sum / samples;
 }
+
+float Sensors::getTemperatureTrend() {
+    return calculateTrend(tempHistory, HISTORY_SIZE);
+}
+
+float Sensors::getHumidityTrend() {
+    return calculateTrend(humidityHistory, HISTORY_SIZE);
+}
+
+float Sensors::getPressureTrend() {
+    return calculateTrend(pressureHistory, HISTORY_SIZE);
+}
+
+float Sensors::calculateTrend(float history[], int count) {
+    if (count < 2) return 0;
+    
+    float sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (int i = 0; i < count; i++) {
+        sumX += i;
+        sumY += history[i];
+        sumXY += i * history[i];
+        sumX2 += i * i;
+    }
+    
