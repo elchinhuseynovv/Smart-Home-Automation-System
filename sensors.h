@@ -163,3 +163,22 @@ private:
     CircularBuffer<float, HISTORY_SIZE> pressureHistory;
     CircularBuffer<float, HISTORY_SIZE> airQualityHistory;
     
+    // New sensor fusion
+    SensorFusion lastFusion;
+    float confidenceScore;
+    
+    // Enhanced error logging
+    String errorLog;
+    int errorCount;
+    
+    // Enhanced helper methods
+    float calculateAverage(float readings[], int count);
+    float calculateTrend(float history[], int count);
+    void updateHistory(float value, float history[]);
+    float calculateDewPoint(float temperature, float humidity);
+    void logError(const String& error);
+    bool validateReading(float value, float min, float max);
+    void updateSensorStatus();
+    float applyCalibration(float value, float offset);
+    float calculateReliability(const String& sensorName);
+    
