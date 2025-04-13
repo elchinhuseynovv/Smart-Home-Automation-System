@@ -271,3 +271,10 @@ bool Sensors::performSelfTest() {
         success = false;
     }
     
+    // Test pressure sensor
+    float pressure = getPressure();
+    if (isnan(pressure) || pressure < 800 || pressure > 1200) {
+        logError("Pressure sensor failure");
+        success = false;
+    }
+    
