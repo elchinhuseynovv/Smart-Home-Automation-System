@@ -278,3 +278,17 @@ bool Sensors::performSelfTest() {
         success = false;
     }
     
+    // Test light sensor
+    float light = getPreciseLightLevel();
+    if (isnan(light) || light < 0) {
+        logError("Light sensor failure");
+        success = false;
+    }
+    
+    return success;
+}
+
+void Sensors::logError(const String& error) {
+    errorLog += "[" + String(millis()) + "] " + error + "\n";
+    errorCount++;
+    
