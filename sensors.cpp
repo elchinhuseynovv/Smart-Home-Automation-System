@@ -292,3 +292,15 @@ void Sensors::logError(const String& error) {
     errorLog += "[" + String(millis()) + "] " + error + "\n";
     errorCount++;
     
+    // Prevent error log from growing too large
+    if (errorLog.length() > 1000) {
+        int firstNewline = errorLog.indexOf('\n');
+        if (firstNewline != -1) {
+            errorLog = errorLog.substring(firstNewline + 1);
+        }
+    }
+}
+
+float Sensors::applyCalibration(float value, float offset) {
+    return value + offset;
+}
