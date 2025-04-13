@@ -8,13 +8,32 @@
     "express": "^4.18.2",
     "ws": "^8.13.0",
     "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "mqtt": "^5.0.5",
+    "influx": "^5.9.3",
+    "node-schedule": "^2.1.1",
+    "winston": "^3.10.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1",
+    "socket.io": "^4.7.2",
+    "mongoose": "^7.5.2",
+    "redis": "^4.6.8",
+    "node-machine-learning": "^1.0.0",
+    "tensorflow.js": "^4.10.0"
   },
   "scripts": {
     "start": "node main.js",
     "dev": "node main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "lint": "eslint .",
+    "build": "webpack --mode production"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.49.0",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
   },
   "author": "Elchin Huseynov",
-  "license": "Elchin Huseynov"
+  "license": "MIT"
 }
