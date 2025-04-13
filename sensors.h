@@ -182,3 +182,10 @@ private:
     float applyCalibration(float value, float offset);
     float calculateReliability(const String& sensorName);
     
+    // New analytics methods
+    float predictValue(float history[], int count, int hoursAhead);
+    float calculateConfidence(float value, float min, float max);
+    void updateMaintenanceMetrics();
+};
+
+#endif
