@@ -56,39 +56,47 @@ unsigned long lastWeatherUpdate = 0;
 float temperatureHistory[24] = {0};
 int historyIndex = 0;
 
-// Melody for alerts
-const int alertMelody[] = {2000, 1500, 2000, 1500};
-const int alertDurations[] = {200, 200, 200, 200};
-
-// Weather prediction data
-struct WeatherData {
-    float temperature;
-    float humidity;
-    float pressure;
-    float rainProbability;
-    float uvIndex;
-} weatherForecast;
+// Error handling
+bool systemError = false;
+String errorMessage = "";
 
 void setup() {
     Serial.begin(9600);
     
-    // Initialize components
+    // Initialize components with error checking
     sensors.begin();
-    if (!display.begin()) {
-        Serial.println(F("SSD1306 allocation failed"));
-        for(;;);
+    if (!sensors.performSelfTest()) {
+        systemError = true;
+        errorMessage = "Sensor initialization failed";
     }
+    
+    if (!display.begin()) {
+        systemError = true;
+        errorMessage += " Display initialization failed";
+    }
+    
     actuators.begin();
     automation.begin();
-    network.begin();
-    storage.begin();
+    
+    if (!network.begin()) {
+        Serial.println("Network initialization failed - continuing without network");
+    }
+    
+    if (!storage.begin()) {
+        Serial.println("Storage initialization failed - continuing without storage");
+    }
     
     // Load saved settings
     loadSystemSettings();
     
     // Initial display message
-    display.showAlert("System Starting...");
-    delay(2000);
+    if (systemError) {
+        display.showAlert("System Error: " + errorMessage);
+        delay(5000);
+    } else {
+        display.showAlert("System Starting...");
+        delay(2000);
+    }
     
     // Initialize weather data
     updateWeatherForecast();
@@ -97,160 +105,125 @@ void setup() {
 void loop() {
     unsigned long currentMillis = millis();
     
-    // Read sensors at regular intervals
-    if (currentMillis - lastSensorRead >= SENSOR_READ_INTERVAL) {
+    // Basic error recovery
+    if (systemError) {
+        handleSystemError();
+        return;
+    }
+    
+    // Read sensors at regular intervals with overflow protection
+    if (currentMillis - lastSensorRead >= SENSOR_READ_INTERVAL || currentMillis < lastSensorRead) {
         lastSensorRead = currentMillis;
         
-        // Get comprehensive sensor readings
-        SensorData sensorData = {
-            .temperature = sensors.getAverageTemperature(),
-            .humidity = sensors.getAverageHumidity(),
-            .pressure = sensors.getAveragePressure(),
-            .motion = sensors.getMotion(),
-            .lightLevel = sensors.getPreciseLightLevel(),
-            .isRaining = sensors.isRaining(),
-            .airQuality = sensors.getAirQuality(),
-            .soilMoisture = sensors.getSoilMoisture(),
-            .uvIndex = sensors.getUVIndex(),
-            .waterLevel = sensors.getWaterLevel()
-        };
+        // Get comprehensive sensor readings with error checking
+        SensorData sensorData;
+        if (!getSensorReadings(&sensorData)) {
+            systemError = true;
+            errorMessage = "Failed to read sensors";
+            return;
+        }
         
-        // Update temperature history
-        temperatureHistory[historyIndex] = sensorData.temperature;
-        historyIndex = (historyIndex + 1) % 24;
+        // Update temperature history with bounds checking
+        if (historyIndex < 24) {
+            temperatureHistory[historyIndex] = sensorData.temperature;
+            historyIndex = (historyIndex + 1) % 24;
+        }
         
-        // Automatic control logic
+        // Automatic control logic with error handling
         if (autoMode) {
-            // Climate control
-            automation.handleClimateControl(sensorData, weatherForecast);
-            
-            // Garden automation
-            if (gardenMode) {
-                automation.handleGardenCare(sensorData, weatherForecast);
+            try {
+                automation.handleClimateControl(sensorData, weatherForecast);
+                
+                if (gardenMode) {
+                    automation.handleGardenCare(sensorData, weatherForecast);
+                }
+                
+                if (energySaveMode) {
+                    automation.handleEnergyManagement(sensorData);
+                }
+                
+                automation.handleSecurity(sensorData);
+                automation.optimizeComfort(sensorData);
+            } catch (...) {
+                systemError = true;
+                errorMessage = "Automation error";
+                return;
             }
-            
-            // Energy management
-            if (energySaveMode) {
-                automation.handleEnergyManagement(sensorData);
-            }
-            
-            // Security monitoring
-            automation.handleSecurity(sensorData);
-            
-            // Comfort optimization
-            automation.optimizeComfort(sensorData);
         }
         
         // Emergency conditions check
         checkEmergencyConditions(sensorData);
         
-        // Log data periodically
-        if (currentMillis - lastDataLog >= DATA_LOGGING_INTERVAL) {
+        // Log data periodically with overflow protection
+        if (currentMillis - lastDataLog >= DATA_LOGGING_INTERVAL || currentMillis < lastDataLog) {
             lastDataLog = currentMillis;
-            storage.logSensorData(sensorData);
+            if (!storage.logSensorData(sensorData)) {
+                Serial.println("Failed to log sensor data");
+            }
         }
         
-        // Update weather forecast periodically
-        if (currentMillis - lastWeatherUpdate >= WEATHER_UPDATE_INTERVAL) {
+        // Update weather forecast periodically with overflow protection
+        if (currentMillis - lastWeatherUpdate >= WEATHER_UPDATE_INTERVAL || currentMillis < lastWeatherUpdate) {
             lastWeatherUpdate = currentMillis;
             updateWeatherForecast();
         }
         
         // Update display with current readings
-        if (currentMillis - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL) {
+        if (currentMillis - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL || currentMillis < lastDisplayUpdate) {
             lastDisplayUpdate = currentMillis;
             updateDisplayInfo(sensorData);
         }
         
-        // Network updates
-        network.sendStatusUpdate(sensorData);
-        handleNetworkCommands();
+        // Network updates with error handling
+        try {
+            network.sendStatusUpdate(sensorData);
+            handleNetworkCommands();
+        } catch (...) {
+            Serial.println("Network communication error");
+        }
     }
     
-    // Check for door auto-close
+    // Check for door auto-close with overflow protection
     if (actuators.getDoorState() != LOCKED && 
-        currentMillis - lastSensorRead >= AUTO_CLOSE_DELAY) {
+        (currentMillis - lastSensorRead >= AUTO_CLOSE_DELAY || currentMillis < lastSensorRead)) {
         actuators.setDoorState(LOCKED);
         Serial.println("Auto-closing door");
     }
 }
 
-void checkEmergencyConditions(const SensorData& data) {
-    bool emergency = false;
-    String alertMessage = "";
+bool getSensorReadings(SensorData* data) {
+    try {
+        data->temperature = sensors.getAverageTemperature();
+        data->humidity = sensors.getAverageHumidity();
+        data->pressure = sensors.getAveragePressure();
+        data->motion = sensors.getMotion();
+        data->lightLevel = sensors.getPreciseLightLevel();
+        data->isRaining = sensors.isRaining();
+        data->airQuality = sensors.getAirQuality();
+        data->soilMoisture = sensors.getSoilMoisture();
+        data->uvIndex = sensors.getUVIndex();
+        data->waterLevel = sensors.getWaterLevel();
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void handleSystemError() {
+    static unsigned long lastErrorDisplay = 0;
+    unsigned long currentMillis = millis();
     
-    if (data.temperature > 35.0) {
-        emergency = true;
-        alertMessage += "High Temperature!\n";
+    // Display error message every 5 seconds
+    if (currentMillis - lastErrorDisplay >= 5000 || currentMillis < lastErrorDisplay) {
+        display.showAlert("System Error: " + errorMessage);
+        lastErrorDisplay = currentMillis;
     }
     
-    if (data.airQuality < 30.0) {
-        emergency = true;
-        alertMessage += "Poor Air Quality!\n";
-    }
-    
-    if (data.waterLevel < LOW_WATER_THRESHOLD) {
-        emergency = true;
-        alertMessage += "Low Water Level!\n";
-    }
-    
-    if (data.uvIndex > HIGH_UV_THRESHOLD) {
-        emergency = true;
-        alertMessage += "High UV Level!\n";
-    }
-    
-    if (emergency) {
-        actuators.playMelody(alertMelody, alertDurations, 4);
-        display.showAlert(alertMessage.c_str());
-        network.sendEmergencyAlert(alertMessage);
+    // Try to recover
+    if (sensors.performSelfTest()) {
+        systemError = false;
+        errorMessage = "";
+        display.showAlert("System recovered");
         delay(2000);
-    }
-}
-
-void updateWeatherForecast() {
-    WeatherData forecast = network.getWeatherForecast();
-    if (forecast.temperature != 0) { // Valid forecast
-        weatherForecast = forecast;
-        automation.updateWeatherStrategy(forecast);
-    }
-}
-
-void updateDisplayInfo(const SensorData& data) {
-    switch (display.getCurrentPage()) {
-        case MAIN:
-            display.updateStatus(data.temperature, data.humidity, data.motion,
-                               data.lightLevel, data.isRaining, data.airQuality);
-            break;
-            
-        case ENVIRONMENT:
-            display.showEnvironmentStatus(data);
-            break;
-            
-        case GARDEN:
-            display.showGardenStatus(data.soilMoisture, data.waterLevel, data.uvIndex);
-            break;
-            
-        case WEATHER:
-            display.showWeatherInfo(weatherForecast);
-            break;
-            
-        case ENERGY:
-            display.showEnergyStatus(automation.getEnergyStats());
-            break;
-    }
-}
-
-void loadSystemSettings() {
-    SystemSettings settings = storage.loadSettings();
-    autoMode = settings.autoMode;
-    energySaveMode = settings.energySaveMode;
-    gardenMode = settings.gardenMode;
-    automation.setThresholds(settings.thresholds);
-}
-
-void handleNetworkCommands() {
-    Command cmd = network.getNextCommand();
-    if (cmd.type != NONE) {
-        automation.handleCommand(cmd);
     }
 }
