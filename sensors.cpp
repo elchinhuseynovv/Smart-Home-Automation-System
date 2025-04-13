@@ -240,3 +240,27 @@ void Sensors::calibrateAirSensor() {
     
     calibration.airQualityBaseline = sum / samples;
 }
+
+void Sensors::calibratePressureSensor() {
+    float sum = 0;
+    const int samples = 10;
+    
+    for (int i = 0; i < samples; i++) {
+        sum += bmp.readPressure();
+        delay(100);
+    }
+    
+    float avgPressure = sum / (samples * 100.0F); // Convert to hPa
+    calibration.pressureOffset = 1013.25 - avgPressure; // Calibrate to standard pressure
+}
+
+bool Sensors::performSelfTest() {
+    bool success = true;
+    
+    // Test temperature sensor
+    float temp = getTemperature();
+    if (isnan(temp) || temp < -40 || temp > 80) {
+        logError("Temperature sensor failure");
+        success = false;
+    }
+    
