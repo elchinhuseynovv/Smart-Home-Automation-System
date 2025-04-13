@@ -216,3 +216,27 @@ float Sensors::calculateTrend(float history[], int count) {
         sumX2 += i * i;
     }
     
+    float n = count;
+    float slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return slope;
+}
+
+void Sensors::updateHistory(float value, float history[]) {
+    if (historyIndex >= HISTORY_SIZE) {
+        historyIndex = 0;
+    }
+    
+    history[historyIndex++] = value;
+}
+
+void Sensors::calibrateAirSensor() {
+    float sum = 0;
+    const int samples = 10;
+    
+    for (int i = 0; i < samples; i++) {
+        sum += airSensor.getCorrectedPPM(getTemperature(), getHumidity());
+        delay(1000);
+    }
+    
+    calibration.airQualityBaseline = sum / samples;
+}
