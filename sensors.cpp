@@ -264,3 +264,10 @@ bool Sensors::performSelfTest() {
         success = false;
     }
     
+    // Test humidity sensor
+    float humidity = getHumidity();
+    if (isnan(humidity) || humidity < 0 || humidity > 100) {
+        logError("Humidity sensor failure");
+        success = false;
+    }
+    
