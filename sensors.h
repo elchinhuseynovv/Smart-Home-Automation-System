@@ -7,15 +7,22 @@
 #include <BH1750.h>
 #include <Adafruit_BMP280.h>
 #include <MQ135.h>
+#include <CircularBuffer.h>
 
+// Enhanced sensor calibration structure
 struct SensorCalibration {
     float tempOffset;
     float humidityOffset;
     float pressureOffset;
     float lightOffset;
     float airQualityBaseline;
+    float uvOffset;
+    float soilMoistureOffset;
+    float waterLevelOffset;
+    unsigned long lastCalibration;
 };
 
+// Enhanced sensor thresholds structure
 struct SensorThresholds {
     float tempMin;
     float tempMax;
@@ -26,6 +33,26 @@ struct SensorThresholds {
     float lightMin;
     float lightMax;
     float airQualityMin;
+    float uvIndexMax;
+    float soilMoistureMin;
+    float waterLevelMin;
+};
+
+// New sensor fusion data structure
+struct SensorFusion {
+    float temperature;
+    float humidity;
+    float pressure;
+    float confidence;
+    unsigned long timestamp;
+};
+
+// New maintenance prediction structure
+struct MaintenancePrediction {
+    bool requiresMaintenance;
+    String component;
+    float reliability;
+    unsigned long predictedTime;
 };
 
 class Sensors {
@@ -33,7 +60,7 @@ public:
     Sensors(uint8_t dhtPin, uint8_t pirPin, uint8_t ldrPin);
     void begin();
     
-    // Environmental readings
+    // Enhanced environmental readings
     float getTemperature();
     float getHumidity();
     float getPressure();
@@ -41,13 +68,13 @@ public:
     float getDewPoint();
     float getHeatIndex();
     
-    // Motion and light
+    // Enhanced motion and light
     bool getMotion();
     int getLightLevel();
     float getPreciseLightLevel();
     float getUVIndex();
     
-    // Weather and air quality
+    // Enhanced weather and air quality
     bool isRaining();
     float getAirQuality();
     float getCO2Level();
@@ -55,19 +82,19 @@ public:
     float getVOCLevel();
     float getOzoneLevel();
     
-    // Advanced readings with averaging
+    // Enhanced readings with averaging
     float getAverageTemperature(int samples = 5);
     float getAverageHumidity(int samples = 5);
     float getAveragePressure(int samples = 5);
     float getAverageAirQuality(int samples = 5);
     
-    // Trend analysis
+    // Enhanced trend analysis
     float getTemperatureTrend();
     float getHumidityTrend();
     float getPressureTrend();
     float getAirQualityTrend();
     
-    // New environmental metrics
+    // Enhanced environmental metrics
     float getSoilMoisture();
     float getSoilTemperature();
     float getSoilPH();
@@ -75,24 +102,39 @@ public:
     float getSoundLevel();
     float getRadiationLevel();
     
-    // Advanced analytics
+    // New sensor fusion methods
+    SensorFusion getFusedEnvironmentalData();
+    float getConfidenceScore();
+    void updateSensorFusion();
+    
+    // New predictive analytics
     float getPredictedTemperature(int hoursAhead);
     float getComfortIndex();
     float getAirQualityIndex();
     bool isPrecipitationLikely();
+    MaintenancePrediction getPredictedMaintenance();
     
-    // Calibration and configuration
+    // Enhanced calibration and configuration
+    void calibrateAllSensors();
     void calibrateAirSensor();
     void calibratePressureSensor();
+    void calibrateLightSensor();
+    void calibrateUVSensor();
     void setSensorCalibration(const SensorCalibration& calibration);
     void setSensorThresholds(const SensorThresholds& thresholds);
     void setUpdateInterval(unsigned long interval);
     
-    // Sensor diagnostics
+    // Enhanced diagnostics
     bool performSelfTest();
     float getBatteryLevel();
     bool getSensorStatus(const String& sensorName);
     void getErrorLog(String& log);
+    float getSensorReliability(const String& sensorName);
+    
+    // New data management
+    void clearHistory();
+    void exportData(String& data);
+    bool importData(const String& data);
     
 private:
     DHT dht;
@@ -103,38 +145,21 @@ private:
     Adafruit_BMP280 bmp;
     MQ135 airSensor;
     
-    // Configuration
+    // Enhanced configuration
     SensorCalibration calibration;
     SensorThresholds thresholds;
     unsigned long updateInterval;
     
-    // State tracking
+    // Enhanced state tracking
     unsigned long lastMotionTime;
     bool motionState;
     unsigned long lastUpdate;
     bool sensorError;
     
-    // History tracking for trends
-    static const int HISTORY_SIZE = 24; // Extended history
-    float tempHistory[HISTORY_SIZE];
-    float humidityHistory[HISTORY_SIZE];
-    float pressureHistory[HISTORY_SIZE];
-    float airQualityHistory[HISTORY_SIZE];
-    int historyIndex;
+    // Enhanced history tracking
+    static const int HISTORY_SIZE = 24;
+    CircularBuffer<float, HISTORY_SIZE> tempHistory;
+    CircularBuffer<float, HISTORY_SIZE> humidityHistory;
+    CircularBuffer<float, HISTORY_SIZE> pressureHistory;
+    CircularBuffer<float, HISTORY_SIZE> airQualityHistory;
     
-    // Error logging
-    String errorLog;
-    int errorCount;
-    
-    // Helper methods
-    float calculateAverage(float readings[], int count);
-    float calculateTrend(float history[], int count);
-    void updateHistory(float value, float history[]);
-    float calculateDewPoint(float temperature, float humidity);
-    void logError(const String& error);
-    bool validateReading(float value, float min, float max);
-    void updateSensorStatus();
-    float applyCalibration(float value, float offset);
-};
-
-#endif
