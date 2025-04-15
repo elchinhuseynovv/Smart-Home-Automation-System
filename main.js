@@ -414,3 +414,6 @@ server.listen(PORT, () => {
   console.log(`Smart Home Automation System running at http://localhost:${PORT}`);
   console.log('WebSocket server is ready for connections');
   
+  // Initialize NLP training
+  initializeNLP();
+});
