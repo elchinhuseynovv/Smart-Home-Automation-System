@@ -367,3 +367,28 @@ wss.on('connection', (ws) => {
       const command = JSON.parse(message.toString());
       await handleCommand(command);
       
+      // Send immediate update after command
+      broadcast({
+        type: 'STATE_UPDATE',
+        data: generateSensorData(),
+        analytics: analytics
+      });
+    } catch (error) {
+      console.error('Error handling message:', error);
+      ws.send(JSON.stringify({
+        type: 'ERROR',
+        error: 'Invalid command format'
+      }));
+    }
+  });
+  
+  ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    addNotification('Connection error occurred', 'error');
+  });
+  
+  ws.on('close', () => {
+    console.log('Client disconnected');
+    clearInterval(interval);
+  });
+});
