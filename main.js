@@ -298,3 +298,21 @@ function updateDeviceHealth() {
     }
   });
 }
+
+// Scene management
+function createScene(scene) {
+  if (!scene.name) return;
+  
+  systemState.scenes[scene.name] = {
+    ...scene,
+    created: moment().toISOString(),
+    lastUsed: null
+  };
+  
+  addNotification(`Scene "${scene.name}" created`);
+}
+
+function activateScene(sceneName) {
+  const scene = systemState.scenes[sceneName];
+  if (!scene) return;
+  
