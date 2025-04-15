@@ -18,8 +18,12 @@
     "socket.io": "^4.7.2",
     "mongoose": "^7.5.2",
     "redis": "^4.6.8",
-    "node-machine-learning": "^1.0.0",
-    "tensorflow.js": "^4.10.0"
+    "@tensorflow/tfjs": "^4.10.0",
+    "moment": "^2.29.4",
+    "node-nlp": "^4.27.0",
+    "axios": "^1.5.0",
+    "chart.js": "^4.4.0",
+    "uuid": "^9.0.0"
   },
   "scripts": {
     "start": "node main.js",
