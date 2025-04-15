@@ -417,3 +417,23 @@ server.listen(PORT, () => {
   // Initialize NLP training
   initializeNLP();
 });
+
+// Initialize NLP training
+async function initializeNLP() {
+  // Add training data for natural language commands
+  nlpManager.addDocument('en', 'set temperature to %temperature%', 'SET_TEMPERATURE');
+  nlpManager.addDocument('en', 'change temperature to %temperature%', 'SET_TEMPERATURE');
+  nlpManager.addDocument('en', 'make it %temperature% degrees', 'SET_TEMPERATURE');
+  
+  nlpManager.addDocument('en', 'turn fan %fanspeed%', 'SET_FAN');
+  nlpManager.addDocument('en', 'set fan to %fanspeed%', 'SET_FAN');
+  
+  nlpManager.addDocument('en', 'set lights to %number%', 'SET_LIGHT');
+  nlpManager.addDocument('en', 'dim lights to %number%', 'SET_LIGHT');
+  
+  nlpManager.addDocument('en', 'open windows to %number%', 'SET_WINDOW');
+  nlpManager.addDocument('en', 'close windows', 'SET_WINDOW');
+  
+  nlpManager.addDocument('en', 'lock the door', 'SET_DOOR');
+  nlpManager.addDocument('en', 'unlock the door', 'SET_DOOR');
+  
