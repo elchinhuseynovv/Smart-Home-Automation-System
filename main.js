@@ -244,3 +244,6 @@ async function handleCommand(command) {
       console.warn('Unknown command type:', command.type);
   }
   
+  // Update device health
+  updateDeviceHealth();
+}
