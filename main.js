@@ -174,3 +174,73 @@ function updateAnalytics() {
     data => moment(data.timestamp).isAfter(dayAgo)
   );
 }
+
+// Enhanced command handling with NLP
+async function handleCommand(command) {
+  console.log('Received command:', command);
+  
+  // Process natural language commands
+  if (typeof command.value === 'string') {
+    const result = await nlpManager.process('en', command.value);
+    command.type = result.intent;
+    command.value = result.entities[0]?.value;
+  }
+  
+  switch (command.type) {
+    case 'SET_TEMPERATURE':
+      if (typeof command.value === 'number' && command.value >= 15 && command.value <= 35) {
+        systemState.temperature = command.value;
+        addNotification('Temperature adjusted to ' + command.value + '°C');
+      }
+      break;
+      
+    case 'SET_FAN':
+      if (['OFF', 'LOW', 'MEDIUM', 'HIGH'].includes(command.value)) {
+        systemState.fanSpeed = command.value;
+        addNotification('Fan speed set to ' + command.value);
+      }
+      break;
+      
+    case 'SET_LIGHT':
+      if (typeof command.value === 'number' && command.value >= 0 && command.value <= 255) {
+        systemState.lightLevel = command.value;
+        addNotification('Light level adjusted');
+      }
+      break;
+      
+    case 'SET_WINDOW':
+      if (typeof command.value === 'number' && command.value >= 0 && command.value <= 100) {
+        systemState.windowOpening = command.value;
+        addNotification('Window position adjusted');
+      }
+      break;
+      
+    case 'SET_DOOR':
+      if (['LOCKED', 'UNLOCKED'].includes(command.value)) {
+        systemState.doorState = command.value;
+        addNotification('Door ' + command.value.toLowerCase());
+      }
+      break;
+      
+    case 'CREATE_SCHEDULE':
+      if (command.schedule) {
+        addDeviceSchedule(command.device, command.schedule);
+      }
+      break;
+      
+    case 'CREATE_SCENE':
+      if (command.scene) {
+        createScene(command.scene);
+      }
+      break;
+      
+    case 'ACTIVATE_SCENE':
+      if (command.scene) {
+        activateScene(command.scene);
+      }
+      break;
+      
+    default:
+      console.warn('Unknown command type:', command.type);
+  }
+  
