@@ -282,3 +282,19 @@ function updateDeviceHealth() {
       };
     }
     
+    // Simulate device health check
+    const health = systemState.deviceHealth[device];
+    health.lastCheck = moment().toISOString();
+    
+    if (Math.random() > 0.99) {
+      health.status = 'WARNING';
+      health.errorCount++;
+      health.maintenance = moment().add(7, 'days').toISOString();
+      
+      addNotification(
+        `${device} maintenance recommended`,
+        'warning'
+      );
+    }
+  });
+}
