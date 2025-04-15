@@ -339,3 +339,8 @@ function addDeviceSchedule(device, schedule) {
   
   addNotification(`Schedule added for ${device}`);
 }
+
+// Enhanced WebSocket handling
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+  
