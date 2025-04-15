@@ -401,3 +401,9 @@ function broadcast(data) {
     }
   });
 }
+
+// Error handling for the server
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  addNotification('Server error occurred', 'error');
+});
