@@ -437,3 +437,26 @@ async function initializeNLP() {
   nlpManager.addDocument('en', 'lock the door', 'SET_DOOR');
   nlpManager.addDocument('en', 'unlock the door', 'SET_DOOR');
   
+  // Add entities
+  nlpManager.addNamedEntityText('temperature', '15', ['en'], ['15', 'fifteen']);
+  nlpManager.addNamedEntityText('temperature', '20', ['en'], ['20', 'twenty']);
+  nlpManager.addNamedEntityText('temperature', '25', ['en'], ['25', 'twenty five']);
+  
+  nlpManager.addNamedEntityText('fanspeed', 'OFF', ['en'], ['off', 'stop', 'disable']);
+  nlpManager.addNamedEntityText('fanspeed', 'LOW', ['en'], ['low', 'slow', 'minimum']);
+  nlpManager.addNamedEntityText('fanspeed', 'MEDIUM', ['en'], ['medium', 'normal']);
+  nlpManager.addNamedEntityText('fanspeed', 'HIGH', ['en'], ['high', 'maximum', 'full']);
+  
+  // Train the model
+  await nlpManager.train();
+  console.log('NLP training completed');
+}
+
+// Handle process termination
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
