@@ -156,20 +156,22 @@
                         return;
                     }
                     
-                    // Update sensor readings
-                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
-                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-                    document.getElementById('motion').textContent = data.motion ? 'Yes' : 'No';
-                    document.getElementById('light').textContent = data.light;
-                    document.getElementById('airQuality').textContent = data.airQuality.toFixed(1);
-                    document.getElementById('doorState').textContent = data.doorState;
-                    document.getElementById('windowOpening').textContent = data.windowOpening;
-                    document.getElementById('fanSpeed').textContent = data.fanSpeed;
-                    document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleTimeString();
+                    // Update sensor readings with null checks
+                    document.getElementById('temperature').textContent = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
+                    document.getElementById('humidity').textContent = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
+                    document.getElementById('motion').textContent = data.motion !== undefined ? (data.motion ? 'Yes' : 'No') : '--';
+                    document.getElementById('light').textContent = data.light !== undefined ? data.light : '--';
+                    document.getElementById('airQuality').textContent = data.airQuality !== undefined ? data.airQuality.toFixed(1) : '--';
+                    document.getElementById('doorState').textContent = data.doorState || '--';
+                    document.getElementById('windowOpening').textContent = data.windowOpening !== undefined ? data.windowOpening : '--';
+                    document.getElementById('fanSpeed').textContent = data.fanSpeed || '--';
+                    document.getElementById('timestamp').textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '--';
                     
                     // Update control states
-                    document.getElementById('lightControl').value = data.lightLevel;
-                    document.getElementById('lightValue').textContent = data.lightLevel;
+                    if (data.lightLevel !== undefined) {
+                        document.getElementById('lightControl').value = data.lightLevel;
+                        document.getElementById('lightValue').textContent = data.lightLevel;
+                    }
                 } catch (error) {
                     console.error('Error parsing message:', error);
                 }
