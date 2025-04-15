@@ -267,3 +267,18 @@ function addNotification(message, type = 'info') {
   
   return notification;
 }
+
+// Device health monitoring
+function updateDeviceHealth() {
+  const devices = ['HVAC', 'Lights', 'Security', 'Windows', 'Doors'];
+  
+  devices.forEach(device => {
+    if (!systemState.deviceHealth[device]) {
+      systemState.deviceHealth[device] = {
+        status: 'OK',
+        lastCheck: moment().toISOString(),
+        errorCount: 0,
+        maintenance: null
+      };
+    }
+    
