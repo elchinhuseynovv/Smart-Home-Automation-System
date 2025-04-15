@@ -344,3 +344,10 @@ function addDeviceSchedule(device, schedule) {
 wss.on('connection', (ws) => {
   console.log('Client connected');
   
+  // Send initial state
+  ws.send(JSON.stringify({
+    type: 'INITIAL_STATE',
+    data: generateSensorData(),
+    analytics: analytics
+  }));
+  
