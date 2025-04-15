@@ -247,3 +247,16 @@ async function handleCommand(command) {
   // Update device health
   updateDeviceHealth();
 }
+
+// Notification management
+function addNotification(message, type = 'info') {
+  const notification = {
+    id: uuidv4(),
+    message,
+    type,
+    timestamp: moment().toISOString(),
+    read: false
+  };
+  
+  systemState.notifications.unshift(notification);
+  
