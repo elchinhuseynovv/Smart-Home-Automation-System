@@ -351,3 +351,13 @@ wss.on('connection', (ws) => {
     analytics: analytics
   }));
   
+  // Set up regular updates
+  const interval = setInterval(() => {
+    const data = generateSensorData();
+    broadcast({
+      type: 'STATE_UPDATE',
+      data: data,
+      analytics: analytics
+    });
+  }, 2000);
+  
