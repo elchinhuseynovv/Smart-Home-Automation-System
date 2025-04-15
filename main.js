@@ -361,3 +361,9 @@ wss.on('connection', (ws) => {
     });
   }, 2000);
   
+  // Handle control commands from client
+  ws.on('message', async (message) => {
+    try {
+      const command = JSON.parse(message.toString());
+      await handleCommand(command);
+      
