@@ -5,6 +5,11 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import moment from 'moment';
+import { NlpManager } from 'node-nlp';
+import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
+import Chart from 'chart.js/auto';
 
 dotenv.config();
 
@@ -19,7 +24,10 @@ app.use(express.static(join(__dirname, 'public')));
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Simulated system state with initial values
+// Initialize NLP manager for natural language processing
+const nlpManager = new NlpManager({ languages: ['en'] });
+
+// Enhanced system state with more features
 let systemState = {
   temperature: 22,
   humidity: 45,
@@ -29,128 +37,140 @@ let systemState = {
   doorState: 'LOCKED',
   windowOpening: 0,
   fanSpeed: 'OFF',
-  lightLevel: 0
+  lightLevel: 0,
+  energyConsumption: 0,
+  solarProduction: 0,
+  batteryLevel: 100,
+  securityStatus: 'ARMED',
+  occupancy: false,
+  weatherForecast: {},
+  automationRules: [],
+  deviceSchedules: {},
+  notifications: [],
+  scenes: {},
+  maintenanceSchedule: [],
+  deviceHealth: {},
+  userPreferences: {}
 };
 
-// Simulate sensor data with more realistic variations
-function generateSensorData() {
-  // Add small random variations to make data more realistic
-  systemState.temperature += (Math.random() - 0.5) * 0.2;
-  systemState.humidity += (Math.random() - 0.5) * 0.5;
-  systemState.motion = Math.random() > 0.8;
-  systemState.light += (Math.random() - 0.5) * 10;
-  systemState.airQuality += (Math.random() - 0.5) * 0.2;
+// Enhanced analytics tracking
+const analytics = {
+  energyUsage: [],
+  temperature: [],
+  humidity: [],
+  occupancy: [],
+  events: []
+};
 
+// Simulate more realistic sensor data with advanced patterns
+function generateSensorData() {
+  const time = moment();
+  const hour = time.hour();
+  
+  // Time-based temperature variations
+  const baseTemp = 22;
+  const tempVariation = Math.sin(hour / 24 * 2 * Math.PI) * 3;
+  systemState.temperature = baseTemp + tempVariation + (Math.random() - 0.5);
+  
+  // Occupancy-based humidity changes
+  if (systemState.occupancy) {
+    systemState.humidity += (Math.random() - 0.4) * 0.5;
+  } else {
+    systemState.humidity += (Math.random() - 0.6) * 0.3;
+  }
+  
+  // Smart motion detection
+  systemState.motion = Math.random() > (systemState.occupancy ? 0.7 : 0.95);
+  
+  // Dynamic light adjustment based on time
+  const isDaytime = hour >= 6 && hour <= 18;
+  systemState.light = isDaytime ? 
+    500 + Math.random() * 300 : 
+    50 + Math.random() * 100;
+  
+  // Air quality degradation when occupied
+  if (systemState.occupancy) {
+    systemState.airQuality -= 0.1;
+  } else {
+    systemState.airQuality += 0.05;
+  }
+  
+  // Energy consumption patterns
+  systemState.energyConsumption = calculateEnergyConsumption();
+  systemState.solarProduction = calculateSolarProduction(hour);
+  
   // Keep values within realistic ranges
   systemState.temperature = Math.max(15, Math.min(35, systemState.temperature));
   systemState.humidity = Math.max(30, Math.min(70, systemState.humidity));
   systemState.light = Math.max(0, Math.min(1000, systemState.light));
   systemState.airQuality = Math.max(0, Math.min(100, systemState.airQuality));
-
+  systemState.batteryLevel = Math.max(0, Math.min(100, systemState.batteryLevel));
+  
+  // Update analytics
+  updateAnalytics();
+  
   return {
     ...systemState,
-    timestamp: new Date().toISOString()
+    timestamp: time.toISOString()
   };
 }
 
-// Broadcast to all connected clients
-function broadcast(data) {
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}
-
-// Handle WebSocket connections
-wss.on('connection', (ws) => {
-  console.log('Client connected');
-
-  // Send initial state
-  ws.send(JSON.stringify(generateSensorData()));
-
-  // Set up regular updates
-  const interval = setInterval(() => {
-    const data = generateSensorData();
-    broadcast(data);
-  }, 2000);
-
-  // Handle control commands from client
-  ws.on('message', (message) => {
-    try {
-      const command = JSON.parse(message.toString());
-      handleCommand(command);
-      // Send immediate update after command
-      const data = generateSensorData();
-      broadcast(data);
-    } catch (error) {
-      console.error('Error handling message:', error);
-      ws.send(JSON.stringify({ error: 'Invalid command format' }));
-    }
-  });
-
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-  });
-
-  ws.on('close', () => {
-    console.log('Client disconnected');
-    clearInterval(interval);
-  });
-});
-
-// Handle system commands
-function handleCommand(command) {
-  console.log('Received command:', command);
+// Enhanced energy consumption calculation
+function calculateEnergyConsumption() {
+  let consumption = 0;
   
-  switch (command.type) {
-    case 'SET_TEMPERATURE':
-      if (typeof command.value === 'number' && command.value >= 15 && command.value <= 35) {
-        systemState.temperature = command.value;
-      }
-      break;
-    case 'SET_FAN':
-      if (['OFF', 'LOW', 'MEDIUM', 'HIGH'].includes(command.value)) {
-        systemState.fanSpeed = command.value;
-      }
-      break;
-    case 'SET_LIGHT':
-      if (typeof command.value === 'number' && command.value >= 0 && command.value <= 255) {
-        systemState.lightLevel = command.value;
-      }
-      break;
-    case 'SET_WINDOW':
-      if (typeof command.value === 'number' && command.value >= 0 && command.value <= 100) {
-        systemState.windowOpening = command.value;
-      }
-      break;
-    case 'SET_DOOR':
-      if (['LOCKED', 'UNLOCKED'].includes(command.value)) {
-        systemState.doorState = command.value;
-      }
-      break;
-    default:
-      console.warn('Unknown command type:', command.type);
+  // Base load
+  consumption += 500;
+  
+  // HVAC consumption
+  if (Math.abs(systemState.temperature - 22) > 2) {
+    consumption += 1000;
   }
+  
+  // Lighting consumption
+  consumption += (systemState.lightLevel / 255) * 200;
+  
+  // Appliance consumption
+  if (systemState.occupancy) {
+    consumption += 300;
+  }
+  
+  return consumption;
 }
 
-// Error handling for the server
-server.on('error', (error) => {
-  console.error('Server error:', error);
-});
+// Solar production calculation
+function calculateSolarProduction(hour) {
+  if (hour >= 6 && hour <= 18) {
+    const peakHour = 12;
+    const efficiency = 1 - Math.abs(hour - peakHour) / 6;
+    return 2000 * efficiency * (0.8 + Math.random() * 0.4);
+  }
+  return 0;
+}
 
-// Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Smart Home Automation System running at http://localhost:${PORT}`);
-  console.log('WebSocket server is ready for connections');
-});
-
-// Handle process termination
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Closing server...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+// Enhanced analytics tracking
+function updateAnalytics() {
+  const timestamp = moment().toISOString();
+  
+  analytics.energyUsage.push({
+    timestamp,
+    consumption: systemState.energyConsumption,
+    production: systemState.solarProduction
   });
-});
+  
+  analytics.temperature.push({
+    timestamp,
+    value: systemState.temperature
+  });
+  
+  analytics.humidity.push({
+    timestamp,
+    value: systemState.humidity
+  });
+  
+  // Maintain data for last 24 hours only
+  const dayAgo = moment().subtract(24, 'hours');
+  analytics.energyUsage = analytics.energyUsage.filter(
+    data => moment(data.timestamp).isAfter(dayAgo)
+  );
+}
