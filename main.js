@@ -392,3 +392,12 @@ wss.on('connection', (ws) => {
     clearInterval(interval);
   });
 });
+
+// Broadcast to all connected clients
+function broadcast(data) {
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
