@@ -316,3 +316,26 @@ function activateScene(sceneName) {
   const scene = systemState.scenes[sceneName];
   if (!scene) return;
   
+  // Apply scene settings
+  if (scene.temperature) systemState.temperature = scene.temperature;
+  if (scene.lightLevel) systemState.lightLevel = scene.lightLevel;
+  if (scene.fanSpeed) systemState.fanSpeed = scene.fanSpeed;
+  
+  scene.lastUsed = moment().toISOString();
+  addNotification(`Scene "${sceneName}" activated`);
+}
+
+// Schedule management
+function addDeviceSchedule(device, schedule) {
+  if (!systemState.deviceSchedules[device]) {
+    systemState.deviceSchedules[device] = [];
+  }
+  
+  systemState.deviceSchedules[device].push({
+    ...schedule,
+    id: uuidv4(),
+    created: moment().toISOString()
+  });
+  
+  addNotification(`Schedule added for ${device}`);
+}
