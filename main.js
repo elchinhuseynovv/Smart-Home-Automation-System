@@ -260,3 +260,10 @@ function addNotification(message, type = 'info') {
   
   systemState.notifications.unshift(notification);
   
+  // Keep only last 50 notifications
+  if (systemState.notifications.length > 50) {
+    systemState.notifications.pop();
+  }
+  
+  return notification;
+}
