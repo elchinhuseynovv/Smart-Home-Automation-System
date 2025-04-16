@@ -78,6 +78,7 @@ function generateSensorData() {
   } else {
     systemState.humidity += (Math.random() - 0.6) * 0.3;
   }
+  systemState.humidity = Math.max(30, Math.min(70, systemState.humidity));
   
   // Smart motion detection
   systemState.motion = Math.random() > (systemState.occupancy ? 0.7 : 0.95);
@@ -94,17 +95,11 @@ function generateSensorData() {
   } else {
     systemState.airQuality += 0.05;
   }
+  systemState.airQuality = Math.max(0, Math.min(100, systemState.airQuality));
   
   // Energy consumption patterns
   systemState.energyConsumption = calculateEnergyConsumption();
   systemState.solarProduction = calculateSolarProduction(hour);
-  
-  // Keep values within realistic ranges
-  systemState.temperature = Math.max(15, Math.min(35, systemState.temperature));
-  systemState.humidity = Math.max(30, Math.min(70, systemState.humidity));
-  systemState.light = Math.max(0, Math.min(1000, systemState.light));
-  systemState.airQuality = Math.max(0, Math.min(100, systemState.airQuality));
-  systemState.batteryLevel = Math.max(0, Math.min(100, systemState.batteryLevel));
   
   // Update analytics
   updateAnalytics();
@@ -179,13 +174,6 @@ function updateAnalytics() {
 async function handleCommand(command) {
   console.log('Received command:', command);
   
-  // Process natural language commands
-  if (typeof command.value === 'string') {
-    const result = await nlpManager.process('en', command.value);
-    command.type = result.intent;
-    command.value = result.entities[0]?.value;
-  }
-  
   switch (command.type) {
     case 'SET_TEMPERATURE':
       if (typeof command.value === 'number' && command.value >= 15 && command.value <= 35) {
@@ -221,27 +209,6 @@ async function handleCommand(command) {
         addNotification('Door ' + command.value.toLowerCase());
       }
       break;
-      
-    case 'CREATE_SCHEDULE':
-      if (command.schedule) {
-        addDeviceSchedule(command.device, command.schedule);
-      }
-      break;
-      
-    case 'CREATE_SCENE':
-      if (command.scene) {
-        createScene(command.scene);
-      }
-      break;
-      
-    case 'ACTIVATE_SCENE':
-      if (command.scene) {
-        activateScene(command.scene);
-      }
-      break;
-      
-    default:
-      console.warn('Unknown command type:', command.type);
   }
   
   // Update device health
@@ -299,47 +266,6 @@ function updateDeviceHealth() {
   });
 }
 
-// Scene management
-function createScene(scene) {
-  if (!scene.name) return;
-  
-  systemState.scenes[scene.name] = {
-    ...scene,
-    created: moment().toISOString(),
-    lastUsed: null
-  };
-  
-  addNotification(`Scene "${scene.name}" created`);
-}
-
-function activateScene(sceneName) {
-  const scene = systemState.scenes[sceneName];
-  if (!scene) return;
-  
-  // Apply scene settings
-  if (scene.temperature) systemState.temperature = scene.temperature;
-  if (scene.lightLevel) systemState.lightLevel = scene.lightLevel;
-  if (scene.fanSpeed) systemState.fanSpeed = scene.fanSpeed;
-  
-  scene.lastUsed = moment().toISOString();
-  addNotification(`Scene "${sceneName}" activated`);
-}
-
-// Schedule management
-function addDeviceSchedule(device, schedule) {
-  if (!systemState.deviceSchedules[device]) {
-    systemState.deviceSchedules[device] = [];
-  }
-  
-  systemState.deviceSchedules[device].push({
-    ...schedule,
-    id: uuidv4(),
-    created: moment().toISOString()
-  });
-  
-  addNotification(`Schedule added for ${device}`);
-}
-
 // Enhanced WebSocket handling
 wss.on('connection', (ws) => {
   console.log('Client connected');
@@ -347,18 +273,16 @@ wss.on('connection', (ws) => {
   // Send initial state
   ws.send(JSON.stringify({
     type: 'INITIAL_STATE',
-    data: generateSensorData(),
-    analytics: analytics
+    data: generateSensorData()
   }));
   
   // Set up regular updates
   const interval = setInterval(() => {
     const data = generateSensorData();
-    broadcast({
+    ws.send(JSON.stringify({
       type: 'STATE_UPDATE',
-      data: data,
-      analytics: analytics
-    });
+      data: data
+    }));
   }, 2000);
   
   // Handle control commands from client
@@ -368,11 +292,10 @@ wss.on('connection', (ws) => {
       await handleCommand(command);
       
       // Send immediate update after command
-      broadcast({
+      ws.send(JSON.stringify({
         type: 'STATE_UPDATE',
-        data: generateSensorData(),
-        analytics: analytics
-      });
+        data: generateSensorData()
+      }));
     } catch (error) {
       console.error('Error handling message:', error);
       ws.send(JSON.stringify({
@@ -393,64 +316,12 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Broadcast to all connected clients
-function broadcast(data) {
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
-    }
-  });
-}
-
-// Error handling for the server
-server.on('error', (error) => {
-  console.error('Server error:', error);
-  addNotification('Server error occurred', 'error');
-});
-
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Smart Home Automation System running at http://localhost:${PORT}`);
   console.log('WebSocket server is ready for connections');
-  
-  // Initialize NLP training
-  initializeNLP();
 });
-
-// Initialize NLP training
-async function initializeNLP() {
-  // Add training data for natural language commands
-  nlpManager.addDocument('en', 'set temperature to %temperature%', 'SET_TEMPERATURE');
-  nlpManager.addDocument('en', 'change temperature to %temperature%', 'SET_TEMPERATURE');
-  nlpManager.addDocument('en', 'make it %temperature% degrees', 'SET_TEMPERATURE');
-  
-  nlpManager.addDocument('en', 'turn fan %fanspeed%', 'SET_FAN');
-  nlpManager.addDocument('en', 'set fan to %fanspeed%', 'SET_FAN');
-  
-  nlpManager.addDocument('en', 'set lights to %number%', 'SET_LIGHT');
-  nlpManager.addDocument('en', 'dim lights to %number%', 'SET_LIGHT');
-  
-  nlpManager.addDocument('en', 'open windows to %number%', 'SET_WINDOW');
-  nlpManager.addDocument('en', 'close windows', 'SET_WINDOW');
-  
-  nlpManager.addDocument('en', 'lock the door', 'SET_DOOR');
-  nlpManager.addDocument('en', 'unlock the door', 'SET_DOOR');
-  
-  // Add entities
-  nlpManager.addNamedEntityText('temperature', '15', ['en'], ['15', 'fifteen']);
-  nlpManager.addNamedEntityText('temperature', '20', ['en'], ['20', 'twenty']);
-  nlpManager.addNamedEntityText('temperature', '25', ['en'], ['25', 'twenty five']);
-  
-  nlpManager.addNamedEntityText('fanspeed', 'OFF', ['en'], ['off', 'stop', 'disable']);
-  nlpManager.addNamedEntityText('fanspeed', 'LOW', ['en'], ['low', 'slow', 'minimum']);
-  nlpManager.addNamedEntityText('fanspeed', 'MEDIUM', ['en'], ['medium', 'normal']);
-  nlpManager.addNamedEntityText('fanspeed', 'HIGH', ['en'], ['high', 'maximum', 'full']);
-  
-  // Train the model
-  await nlpManager.train();
-  console.log('NLP training completed');
-}
 
 // Handle process termination
 process.on('SIGTERM', () => {
