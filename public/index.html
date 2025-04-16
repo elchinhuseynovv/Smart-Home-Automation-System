@@ -137,7 +137,9 @@
         const reconnectDelay = 3000;
         
         function connect() {
-            ws = new WebSocket(`ws://${window.location.host}`);
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            ws = new WebSocket(wsUrl);
             
             ws.onopen = () => {
                 console.log('Connected to server');
@@ -149,31 +151,75 @@
             
             ws.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
+                    const message = JSON.parse(event.data);
                     
-                    if (data.error) {
-                        console.error('Server error:', data.error);
+                    if (message.error) {
+                        console.error('Server error:', message.error);
                         return;
                     }
                     
-                    // Update sensor readings with null checks
-                    document.getElementById('temperature').textContent = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
-                    document.getElementById('humidity').textContent = data.humidity !== undefined ? data.humidity.toFixed(1) : '--';
-                    document.getElementById('motion').textContent = data.motion !== undefined ? (data.motion ? 'Yes' : 'No') : '--';
-                    document.getElementById('light').textContent = data.light !== undefined ? data.light : '--';
-                    document.getElementById('airQuality').textContent = data.airQuality !== undefined ? data.airQuality.toFixed(1) : '--';
-                    document.getElementById('doorState').textContent = data.doorState || '--';
-                    document.getElementById('windowOpening').textContent = data.windowOpening !== undefined ? data.windowOpening : '--';
-                    document.getElementById('fanSpeed').textContent = data.fanSpeed || '--';
-                    document.getElementById('timestamp').textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '--';
+                    if (!message.data) {
+                        console.error('No data in message');
+                        return;
+                    }
+                    
+                    const data = message.data;
+                    
+                    // Update sensor readings with null checks and formatting
+                    if (data.temperature !== undefined) {
+                        document.getElementById('temperature').textContent = 
+                            Number(data.temperature).toFixed(1);
+                    }
+                    
+                    if (data.humidity !== undefined) {
+                        document.getElementById('humidity').textContent = 
+                            Number(data.humidity).toFixed(1);
+                    }
+                    
+                    if (data.motion !== undefined) {
+                        document.getElementById('motion').textContent = 
+                            data.motion ? 'Yes' : 'No';
+                    }
+                    
+                    if (data.light !== undefined) {
+                        document.getElementById('light').textContent = 
+                            Math.round(data.light);
+                    }
+                    
+                    if (data.airQuality !== undefined) {
+                        document.getElementById('airQuality').textContent = 
+                            Number(data.airQuality).toFixed(1);
+                    }
+                    
+                    if (data.doorState !== undefined) {
+                        document.getElementById('doorState').textContent = 
+                            data.doorState;
+                    }
+                    
+                    if (data.windowOpening !== undefined) {
+                        document.getElementById('windowOpening').textContent = 
+                            Math.round(data.windowOpening);
+                    }
+                    
+                    if (data.fanSpeed !== undefined) {
+                        document.getElementById('fanSpeed').textContent = 
+                            data.fanSpeed;
+                    }
+                    
+                    if (data.timestamp) {
+                        document.getElementById('timestamp').textContent = 
+                            new Date(data.timestamp).toLocaleTimeString();
+                    }
                     
                     // Update control states
                     if (data.lightLevel !== undefined) {
-                        document.getElementById('lightControl').value = data.lightLevel;
-                        document.getElementById('lightValue').textContent = data.lightLevel;
+                        const lightControl = document.getElementById('lightControl');
+                        const lightValue = document.getElementById('lightValue');
+                        lightControl.value = data.lightLevel;
+                        lightValue.textContent = Math.round(data.lightLevel);
                     }
                 } catch (error) {
-                    console.error('Error parsing message:', error);
+                    console.error('Error processing message:', error);
                 }
             };
             
@@ -203,7 +249,6 @@
             inputs.forEach(input => input.disabled = !enabled);
         }
         
-        // Control functions
         function sendCommand(command) {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify(command));
@@ -230,7 +275,7 @@
             sendCommand({ type: 'SET_LIGHT', value: value });
         }
 
-        // Initialize connection
+        // Initialize connection when page loads
         connect();
     </script>
 </body>
