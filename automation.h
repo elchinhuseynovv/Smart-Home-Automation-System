@@ -71,6 +71,38 @@ struct AutomationRule {
     int priority;
 };
 
+// New structures for enhanced functionality
+struct MaintenanceSchedule {
+    String component;
+    unsigned long lastMaintenance;
+    unsigned long nextMaintenance;
+    int priority;
+    bool completed;
+};
+
+struct PowerUsageProfile {
+    float baselineUsage;
+    float peakHourUsage;
+    float offPeakUsage;
+    float renewableContribution;
+    float batteryCapacity;
+};
+
+struct WeatherAdaptation {
+    float tempAdjustment;
+    float humidityAdjustment;
+    bool windowStrategy;
+    bool shadeControl;
+    float energyImpact;
+};
+
+struct OccupancyPattern {
+    int hourlyPresence[24];
+    float activityLevels[24];
+    bool weekendPattern;
+    unsigned long lastUpdate;
+};
+
 class Automation {
 public:
     Automation();
@@ -101,7 +133,7 @@ public:
     EnergyStats getEnergyStats() const;
     float getComfortIndex() const;
     
-    // New Advanced Features
+    // Advanced Features
     void addAutomationRule(const AutomationRule& rule);
     void removeAutomationRule(const String& condition);
     void processAutomationRules();
@@ -117,7 +149,40 @@ public:
     String getSecurityStatus() const;
     void notifyAuthorities();
     void evacuationProtocol();
+
+    // New Advanced Functions
+    void predictOccupancy(const OccupancyPattern& pattern);
+    void optimizePowerDistribution(const PowerUsageProfile& profile);
+    void schedulePreventiveMaintenance(const MaintenanceSchedule& schedule);
+    void adaptToWeatherChanges(const WeatherAdaptation& adaptation);
+    void manageSmartAppliances();
+    void optimizeWaterUsage();
+    void monitorStructuralHealth();
+    void controlSmartBlinds(float sunIntensity);
+    void manageEVCharging(bool peakHours);
+    void optimizeVentilation(float co2Level);
     
+    // New Comfort Functions
+    void setZoneTemperature(int zone, float temperature);
+    void adjustAmbientLighting(float intensity, int colorTemp);
+    void manageAirQuality(float pollutionLevel);
+    void controlHumidification(float targetHumidity);
+    void optimizeAcousticComfort(float noiseLevel);
+    
+    // New Energy Functions
+    void manageSolarProduction(float currentProduction);
+    void optimizeBatteryStorage(float chargeLevel);
+    void shiftPeakLoads(float currentDemand);
+    void monitorApplianceEfficiency();
+    void trackEnergyUsagePatterns();
+    
+    // New Security Functions
+    void monitorPerimeterSecurity();
+    void detectAnomalies(const SecurityEvent& event);
+    void manageCCTVRecording();
+    void controlAccessPoints();
+    void handleSecurityBreach(const String& location);
+
 private:
     // System states
     bool nightMode;
@@ -154,43 +219,3 @@ private:
     unsigned long optimizationInterval;
     unsigned long lastSecurityCheck;
     
-    // Automation rules
-    std::vector<AutomationRule> rules;
-    
-    // Helper methods
-    void adjustClimateControl(float temperature, float humidity);
-    void calculateEnergySavings();
-    void handleEmergency(const String& type);
-    void loadUserPreferences();
-    void initializeML();
-    float calculateOptimalTemperature(float currentTemp, const WeatherData& forecast);
-    float calculateOptimalOpening(const SensorData& data, const WeatherData& forecast);
-    void activateHeating(float difference);
-    void activateCooling(float difference);
-    float calculateDewPoint(float temperature, float humidity);
-    float calculateOptimalWatering(const SensorData& data, const WeatherData& forecast);
-    bool isPeakHour() const;
-    void shiftLoads();
-    void prioritizeLoads();
-    float getSolarProduction() const;
-    void storeExcessEnergy();
-    void updateBaselineConsumption();
-    void updateEnergyStats(float consumption);
-    void predictFutureConsumption();
-    bool analyzeMotionPattern(const std::vector<SecurityEvent>& events);
-    void handleSuspiciousActivity();
-    bool checkPerimeterBreach(const SensorData& data);
-    void activateSecurityResponse();
-    void updateCameraCoverage(bool motion);
-    void performSecurityAudit();
-    float calculateLightComfort(float lightLevel);
-    float calculateNoiseComfort(float noiseLevel);
-    float calculateWeightedComfort(const ComfortFactors& factors);
-    void updateComfortPreferences(const SensorData& data, float comfort);
-    void prioritizeComfortImprovements(const ComfortFactors& factors);
-    void adjustLightingForTimeOfDay();
-    void improveAirQuality(const SensorData& data);
-    void logSecurityEvent();
-};
-
-#endif
