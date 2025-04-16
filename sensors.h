@@ -9,6 +9,9 @@
 #include <MQ135.h>
 #include <CircularBuffer.h>
 
+// Fix: Add proper version control
+#define SENSORS_VERSION "1.0.1"
+
 // Enhanced sensor calibration structure
 struct SensorCalibration {
     float tempOffset;
@@ -170,6 +173,25 @@ private:
     // Enhanced error logging
     String errorLog;
     int errorCount;
+
+    // Fix: Add last valid readings storage
+    float lastValidTemperature;
+    float lastValidHumidity;
+    float lastValidPressure;
+    float lastValidLight;
+    
+    // Fix: Add sensor status tracking
+    struct SensorStatus {
+        bool isInitialized;
+        bool isWorking;
+        unsigned long lastReading;
+        int errorCount;
+    };
+    
+    SensorStatus tempSensorStatus;
+    SensorStatus humiditySensorStatus;
+    SensorStatus pressureSensorStatus;
+    SensorStatus lightSensorStatus;
     
     // Enhanced helper methods
     float calculateAverage(float readings[], int count);
