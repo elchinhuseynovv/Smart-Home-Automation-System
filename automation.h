@@ -219,3 +219,6 @@ private:
     unsigned long optimizationInterval;
     unsigned long lastSecurityCheck;
     
+    // Automation rules
+    std::vector<AutomationRule> rules;
+    
